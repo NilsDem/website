@@ -322,22 +322,27 @@ function sectionLabel(section = "") {
 
 function mainNav(current = "") {
   const itemClass = (id) => (current === id ? "nav-item active" : "nav-item");
+  const legendLink = (id, href, label) => `<a class="legend-link" href="${href}"${current === id ? ' aria-current="page"' : ""}>
+      <span class="legend-symbol legend-${id}" aria-hidden="true"></span>
+      <span>${label}</span>
+    </a>`;
   return `<nav class="main-nav" aria-label="Main navigation">
+    <span class="legend-title">Map key</span>
     <div class="${itemClass("research")}">
-      <a href="/research.html">Research</a>
+      ${legendLink("research", "/research.html", "Research")}
       <div class="submenu">
         <a href="/research.html#technologies">Technologies</a>
         <a href="/research.html#publications">List of publications</a>
       </div>
     </div>
     <div class="${itemClass("projects")}">
-      <a href="/projects.html">Projects</a>
+      ${legendLink("projects", "/projects.html", "Projects")}
       <div class="submenu">
         <a href="/projects.html">Artistic collaborations</a>
       </div>
     </div>
-    <div class="${itemClass("media")}"><a href="/media.html">Medias</a></div>
-    <div class="${itemClass("teaching")}"><a href="/teaching.html">Teaching</a></div>
+    <div class="${itemClass("media")}">${legendLink("media", "/media.html", "Medias")}</div>
+    <div class="${itemClass("teaching")}">${legendLink("teaching", "/teaching.html", "Teaching")}</div>
   </nav>`;
 }
 
@@ -811,24 +816,119 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
 }
 .main-nav {
   display: flex;
-  gap: 0.9rem;
+  gap: 0.35rem;
   flex-wrap: wrap;
   align-items: center;
+  padding: 0.32rem;
+  background: color-mix(in srgb, var(--paper) 56%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 82%, transparent);
+}
+.legend-title {
+  padding: 0 0.45rem 0 0.2rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 .nav-item {
   position: relative;
 }
-.nav-item > a {
+.legend-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  min-height: 2rem;
+  padding: 0.32rem 0.55rem;
   color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1;
   text-decoration: none;
 }
-.nav-item:hover > a,
-.nav-item.active > a {
+.nav-item:hover .legend-link,
+.nav-item.active .legend-link {
   color: var(--ink);
+  background:
+    linear-gradient(90deg, rgba(5, 5, 5, 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(5, 5, 5, 0.045) 1px, transparent 1px);
+  background-size: 8px 8px;
+  outline: 1px solid var(--ink);
+}
+.legend-symbol {
+  position: relative;
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 1.15rem;
+  height: 1.15rem;
+  place-items: center;
+  color: var(--ink);
+}
+.legend-symbol::before,
+.legend-symbol::after {
+  content: "";
+  display: block;
+}
+.legend-research::before {
+  width: 1.08rem;
+  height: 0.72rem;
+  border: 1.5px solid currentColor;
+  border-left-color: transparent;
+  border-radius: 52% 48% 45% 55%;
+  transform: rotate(-18deg);
+}
+.legend-research::after {
+  position: absolute;
+  width: 0.48rem;
+  height: 0.3rem;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  transform: rotate(-18deg);
+}
+.legend-projects::before {
+  width: 0.76rem;
+  height: 0.76rem;
+  border: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+.legend-projects::after {
+  position: absolute;
+  width: 0.24rem;
+  height: 0.24rem;
+  background: currentColor;
+}
+.legend-media::before {
+  width: 1rem;
+  height: 0.72rem;
+  border: 1.5px solid currentColor;
+}
+.legend-media::after {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-top: 0.23rem solid transparent;
+  border-bottom: 0.23rem solid transparent;
+  border-left: 0.36rem solid currentColor;
+  transform: translateX(0.05rem);
+}
+.legend-teaching::before {
+  width: 0.68rem;
+  height: 0.68rem;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+.legend-teaching::after {
+  position: absolute;
+  bottom: 0.05rem;
+  width: 0.48rem;
+  height: 1.08rem;
+  border-left: 1.5px solid currentColor;
+  transform: rotate(32deg);
+  transform-origin: bottom center;
 }
 .submenu {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 0.42rem);
   left: 0;
   z-index: 20;
   display: none;
