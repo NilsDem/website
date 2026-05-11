@@ -359,8 +359,8 @@ function pageShell({ title, description, body, current = "", siteTitle: titleInH
 <body>
   <header class="topbar">
     <a class="brand" href="/"><span>${escapeHtml(titleInHeader)}</span></a>
-    ${mainNav(current)}
   </header>
+  ${mainNav(current)}
   ${body}
 </body>
 </html>`;
@@ -792,8 +792,6 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
   top: 0;
   z-index: 10;
   display: flex;
-  justify-content: space-between;
-  gap: 1rem;
   padding: 0.85rem clamp(1rem, 3vw, 2rem);
   background: color-mix(in srgb, #ecece7 92%, transparent);
   border-bottom: 1px solid var(--line);
