@@ -815,21 +815,27 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
   letter-spacing: 0;
 }
 .main-nav {
-  display: flex;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-  align-items: center;
-  padding: 0.32rem;
-  background: color-mix(in srgb, var(--paper) 56%, transparent);
-  border: 1px solid color-mix(in srgb, var(--ink) 82%, transparent);
+  position: fixed;
+  right: clamp(1rem, 3vw, 2rem);
+  bottom: clamp(1rem, 3vw, 2rem);
+  z-index: 30;
+  display: grid;
+  width: min(14rem, calc(100vw - 2rem));
+  padding: 0.45rem;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  border: 1.5px solid var(--ink);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 28%, transparent);
+  backdrop-filter: blur(12px);
 }
 .legend-title {
-  padding: 0 0.45rem 0 0.2rem;
-  color: var(--muted);
+  padding: 0.1rem 0.25rem 0.5rem;
+  color: var(--ink);
   font-size: 0.72rem;
   font-weight: 800;
+  line-height: 1;
   text-transform: uppercase;
   white-space: nowrap;
+  border-bottom: 1px solid var(--ink);
 }
 .nav-item {
   position: relative;
@@ -838,8 +844,9 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
   display: inline-flex;
   align-items: center;
   gap: 0.42rem;
+  width: 100%;
   min-height: 2rem;
-  padding: 0.32rem 0.55rem;
+  padding: 0.44rem 0.3rem;
   color: var(--muted);
   font-size: 0.88rem;
   line-height: 1;
@@ -852,7 +859,7 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
     linear-gradient(90deg, rgba(5, 5, 5, 0.045) 1px, transparent 1px),
     linear-gradient(180deg, rgba(5, 5, 5, 0.045) 1px, transparent 1px);
   background-size: 8px 8px;
-  outline: 1px solid var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
 }
 .legend-symbol {
   position: relative;
@@ -927,15 +934,13 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
   transform-origin: bottom center;
 }
 .submenu {
-  position: absolute;
-  top: calc(100% + 0.42rem);
-  left: 0;
+  position: static;
   z-index: 20;
   display: none;
-  min-width: 12rem;
-  padding: 0.45rem;
-  background: var(--paper);
-  border: 1px solid var(--ink);
+  margin: 0 0 0.3rem 1.58rem;
+  padding: 0.28rem 0 0.2rem 0.45rem;
+  background: transparent;
+  border-left: 1px solid var(--ink);
 }
 .nav-item:hover .submenu,
 .nav-item:focus-within .submenu {
