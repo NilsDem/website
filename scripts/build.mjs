@@ -340,6 +340,7 @@ function mainNav(current = "") {
 }
 
 function pageShell({ title, description, body, current = "", siteTitle: titleInHeader = siteTitle }) {
+  const mapId = current || "home";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -349,7 +350,7 @@ function pageShell({ title, description, body, current = "", siteTitle: titleInH
   <meta name="description" content="${escapeHtml(description || "ACIDS")}" />
   <link rel="stylesheet" href="/styles.css">
 </head>
-<body>
+<body class="map-${escapeHtml(mapId)}">
   ${mainNav(current)}
   ${body}
 </body>
@@ -556,7 +557,15 @@ function contourSegment(x, y, size, values, level) {
   return `M${active[0][0].toFixed(1)} ${active[0][1].toFixed(1)}L${active[1][0].toFixed(1)} ${active[1][1].toFixed(1)}`;
 }
 
-function topographySvg() {
+const mapVariants = {
+  home: { file: "topography-home.svg", x: 0, y: 0, filterSeed: 11 },
+  research: { file: "topography-research.svg", x: 720, y: 1080, filterSeed: 13 },
+  projects: { file: "topography-projects.svg", x: -520, y: 2440, filterSeed: 17 },
+  media: { file: "topography-media.svg", x: 1180, y: 3860, filterSeed: 19 },
+  teaching: { file: "topography-teaching.svg", x: -940, y: 5200, filterSeed: 23 },
+};
+
+function topographySvg({ x: offsetX = 0, y: offsetY = 0, filterSeed = 11 } = {}) {
   const width = 1800;
   const height = 7200;
   const size = 12;
@@ -576,10 +585,10 @@ function topographySvg() {
     for (let y = -size; y < height + size; y += size) {
       for (let x = -size; x < width + size; x += size) {
         const values = [
-          terrainValue(x, y),
-          terrainValue(x + size, y),
-          terrainValue(x + size, y + size),
-          terrainValue(x, y + size),
+          terrainValue(x + offsetX, y + offsetY),
+          terrainValue(x + size + offsetX, y + offsetY),
+          terrainValue(x + size + offsetX, y + size + offsetY),
+          terrainValue(x + offsetX, y + size + offsetY),
         ];
         const segment = contourSegment(x, y, size, values, level);
         if (segment) segments.push(segment);
@@ -594,7 +603,7 @@ function topographySvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid slice">
   <defs>
     <filter id="hand-drawn" x="-2%" y="-2%" width="104%" height="104%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.018 0.031" numOctaves="2" seed="11" result="noise"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.018 0.031" numOctaves="2" seed="${filterSeed}" result="noise"/>
       <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
   </defs>
@@ -639,7 +648,10 @@ async function build() {
   await copyDir(join(root, "assets"), join(distDir, "assets"));
   await mkdir(join(distDir, "assets/generated"), { recursive: true });
   await copyGeistFonts();
-  await writeFile(join(distDir, "assets/generated/topography.svg"), topographySvg(), "utf8");
+  await Promise.all(Object.values(mapVariants).map((variant) =>
+    writeFile(join(distDir, "assets/generated", variant.file), topographySvg(variant), "utf8")
+  ));
+  await writeFile(join(distDir, "assets/generated/topography.svg"), topographySvg(mapVariants.home), "utf8");
   await writeFile(join(distDir, "assets/generated/paper-grain.svg"), paperGrainSvg(), "utf8");
   await writeFile(join(distDir, "styles.css"), css, "utf8");
 
@@ -756,6 +768,7 @@ const css = `
   --blue: #2248ff;
   --grid: rgba(18, 18, 15, 0.065);
   --grid-strong: rgba(18, 18, 15, 0.12);
+  --map-image: url("/assets/generated/topography-home.svg");
   --font-body: "Avenir Next", "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-display: "Avenir Next Condensed", "DIN Condensed", "Helvetica Neue", Arial, sans-serif;
   --font-title: "Geist Mono", "Avenir Next Condensed", "DIN Condensed", sans-serif;
@@ -767,7 +780,7 @@ html { scroll-behavior: smooth; }
 body {
   margin: 0;
   color: var(--ink);
-  background-image: url("/assets/generated/topography.svg");
+  background-image: var(--map-image);
   background-color: #f4f3ee;
   background-position: center top;
   background-repeat: no-repeat;
@@ -776,6 +789,11 @@ body {
   font-family: var(--font-body);
   line-height: 1.45;
 }
+body.map-home { --map-image: url("/assets/generated/topography-home.svg"); }
+body.map-research { --map-image: url("/assets/generated/topography-research.svg"); }
+body.map-projects { --map-image: url("/assets/generated/topography-projects.svg"); }
+body.map-media { --map-image: url("/assets/generated/topography-media.svg"); }
+body.map-teaching { --map-image: url("/assets/generated/topography-teaching.svg"); }
 body::before {
   content: "";
   position: fixed;
