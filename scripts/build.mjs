@@ -559,23 +559,16 @@ function contourSegment(x, y, size, values, level) {
 function topographySvg() {
   const width = 1800;
   const height = 7200;
-  const size = 16;
-  const levels = [-0.08, 0.02, 0.12, 0.22, 0.32, 0.43, 0.54, 0.66, 0.79, 0.93, 1.08, 1.24, 1.42];
+  const size = 12;
+  const levels = [0.16, 0.24, 0.31, 0.39, 0.5, 0.58, 0.67, 0.79, 0.88, 0.99, 1.13];
   const lines = [];
   const grid = [];
-  const routes = [
-    "M-60 1770C260 1870 450 1820 690 2000S1190 2210 1880 2070",
-    "M-90 2820C270 2940 630 2760 930 2940S1450 3180 1880 2940",
-    "M-40 4860C330 5000 510 4660 780 4820S1110 5480 1540 5360S1840 5160 1900 5480",
-    "M260 -80C360 460 240 830 540 1120S860 1600 760 2200",
-    "M1580 -120C1440 420 1700 920 1540 1470S1260 2220 1480 2980S1760 4050 1500 4700",
-  ];
 
   for (let x = 0, index = 0; x <= width; x += 120, index += 1) {
-    grid.push(`<path d="M${x} 0V${height}"${index % 2 === 1 ? ' stroke-dasharray="7 22"' : ""}/>`);
+    grid.push(`<path d="M${x} 0V${height}"${index % 2 === 1 ? ' stroke-dasharray="14 18"' : ""}/>`);
   }
   for (let y = 0, index = 0; y <= height; y += 120, index += 1) {
-    grid.push(`<path d="M0 ${y}H${width}"${index % 2 === 1 ? ' stroke-dasharray="7 22"' : ""}/>`);
+    grid.push(`<path d="M0 ${y}H${width}"${index % 2 === 1 ? ' stroke-dasharray="14 18"' : ""}/>`);
   }
 
   for (const level of levels) {
@@ -592,36 +585,23 @@ function topographySvg() {
         if (segment) segments.push(segment);
       }
     }
-    if (!segments.length) continue;
     const index = levels.indexOf(level);
-    const major = index % 4 === 0;
-    const opacity = major ? 0.34 : 0.2 + (index % 3) * 0.045;
-    const strokeWidth = major ? 1.65 : 0.72 + (index % 3) * 0.12;
-    const dash = major && index % 8 === 0 ? ' stroke-dasharray="18 18 3 18"' : "";
-    const color = major ? "#686862" : index % 2 === 0 ? "#8c8c86" : "#adada7";
-    lines.push(`<path d="${segments.join("")}" stroke="${color}" stroke-width="${strokeWidth.toFixed(2)}" opacity="${opacity.toFixed(2)}"${dash}/>`); 
+    const opacity = (0.09 + index * 0.012).toFixed(3);
+    const strokeWidth = (0.85 + index * 0.07).toFixed(2);
+    lines.push(`<path d="${segments.join("")}" stroke-width="${strokeWidth}" opacity="${opacity}"/>`); 
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid slice">
   <defs>
-    <linearGradient id="map-bg" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="0.52" stop-color="#f4f3ee"/>
-      <stop offset="1" stop-color="#e7e4dc"/>
-    </linearGradient>
     <filter id="hand-drawn" x="-2%" y="-2%" width="104%" height="104%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.011 0.027" numOctaves="3" seed="11" result="noise"/>
-      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3.8" xChannelSelector="R" yChannelSelector="G"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.018 0.031" numOctaves="2" seed="11" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
   </defs>
-  <rect width="${width}" height="${height}" fill="url(#map-bg)"/>
-  <g fill="none" stroke="#9a9a93" stroke-width="0.65" opacity="0.09">
+  <g fill="none" stroke="#050505" stroke-width="1.05" opacity="0.105">
     ${grid.join("\n    ")}
   </g>
-  <g fill="none" stroke="#74746e" stroke-linecap="round" stroke-linejoin="round" opacity="0.24">
-    ${routes.slice(0, 4).map((route, index) => `<path d="${route}" stroke-width="${index % 2 === 0 ? "2.2" : "1.45"}" stroke-dasharray="${index % 2 === 0 ? "22 15 4 15" : "7 19"}"/>`).join("\n    ")}
-  </g>
-  <g fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#hand-drawn)">
+  <g fill="none" stroke="#050505" stroke-linecap="round" stroke-linejoin="round" filter="url(#hand-drawn)">
     ${lines.join("\n    ")}
   </g>
 </svg>`;
