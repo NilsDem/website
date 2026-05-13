@@ -368,7 +368,7 @@ function pageShell({ title, description, body, current = "", siteTitle: titleInH
 <body class="map-${escapeHtml(mapId)}">
   ${mainNav(current)}
   ${body}
-  <div class="coordinate-readout" aria-live="off">LAT 48.85660 N / LONG 2.35220 E</div>
+  <div class="coordinate-readout" aria-live="off">LAT 48.85660 N / LONG 2.35220 E / ALT 72 M</div>
   <script>
     (() => {
       const readout = document.querySelector(".coordinate-readout");
@@ -377,13 +377,21 @@ function pageShell({ title, description, body, current = "", siteTitle: titleInH
       const span = { lat: 0.082, lon: 0.14, scrollLat: 0.000018, scrollLon: 0.000006 };
       let pointer = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
       const format = (value, positive, negative) => Math.abs(value).toFixed(5) + " " + (value >= 0 ? positive : negative);
+      const altitude = (x, y) => {
+        const ridge = Math.sin(x * 0.017 + y * 0.010) * 38 + Math.sin(x * 0.031 - y * 0.014 + 2.1) * 22;
+        const hills = Math.sin((x - 220) * 0.008) * Math.cos((y + 80) * 0.006) * 120;
+        const detail = Math.sin((x + y) * 0.021) * 18;
+        return Math.round(180 + ridge + hills + detail);
+      };
       const update = () => {
         const nx = pointer.x / Math.max(window.innerWidth, 1) - 0.5;
         const ny = pointer.y / Math.max(window.innerHeight, 1) - 0.5;
         const scroll = window.scrollY || document.documentElement.scrollTop || 0;
         const lat = origin.lat - ny * span.lat - scroll * span.scrollLat;
         const lon = origin.lon + nx * span.lon + scroll * span.scrollLon;
-        readout.textContent = "LAT " + format(lat, "N", "S") + " / LONG " + format(lon, "E", "W");
+        const mapX = pointer.x + window.innerWidth * 0.5;
+        const mapY = pointer.y + scroll;
+        readout.textContent = "LAT " + format(lat, "N", "S") + " / LONG " + format(lon, "E", "W") + " / ALT " + altitude(mapX, mapY) + " M";
       };
       window.addEventListener("pointermove", (event) => {
         pointer = { x: event.clientX, y: event.clientY };
@@ -842,6 +850,9 @@ const css = `
   --blue: #2248ff;
   --grid: rgba(18, 18, 15, 0.065);
   --grid-strong: rgba(18, 18, 15, 0.12);
+  --paper-bg: #f4f3ee;
+  --frame-inset: clamp(0.9rem, 3vw, 2.4rem);
+  --frame-line: rgba(18, 18, 15, 0.66);
   --map-image: url("/assets/generated/topography-home.svg");
   --font-body: "Geist Mono", "Avenir Next", "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-display: "Geist Mono", "Avenir Next Condensed", "DIN Condensed", "Helvetica Neue", Arial, sans-serif;
@@ -852,13 +863,15 @@ const css = `
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body {
+  position: relative;
+  min-height: 100vh;
   margin: 0;
   color: var(--ink);
   background-image: var(--map-image);
-  background-color: #f4f3ee;
-  background-position: center top;
+  background-color: var(--paper-bg);
+  background-position: var(--frame-inset) var(--frame-inset);
   background-repeat: no-repeat;
-  background-size: min(1800px, 170vw) auto;
+  background-size: 1800px auto;
   background-attachment: scroll;
   font-family: var(--font-body);
   line-height: 1.45;
@@ -879,23 +892,49 @@ body::before {
   opacity: 0.14;
   mix-blend-mode: multiply;
 }
+body::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--paper-bg), var(--paper-bg)) top left / 100% var(--frame-inset) no-repeat,
+    linear-gradient(var(--paper-bg), var(--paper-bg)) bottom left / 100% var(--frame-inset) no-repeat,
+    linear-gradient(var(--paper-bg), var(--paper-bg)) top left / var(--frame-inset) 100% no-repeat,
+    linear-gradient(var(--paper-bg), var(--paper-bg)) top right / var(--frame-inset) 100% no-repeat,
+    linear-gradient(var(--frame-line), var(--frame-line)) left var(--frame-inset) top var(--frame-inset) / calc(100% - (2 * var(--frame-inset))) 1px no-repeat,
+    linear-gradient(var(--frame-line), var(--frame-line)) left var(--frame-inset) bottom var(--frame-inset) / calc(100% - (2 * var(--frame-inset))) 1px no-repeat,
+    linear-gradient(var(--frame-line), var(--frame-line)) left var(--frame-inset) top var(--frame-inset) / 1px calc(100% - (2 * var(--frame-inset))) no-repeat,
+    linear-gradient(var(--frame-line), var(--frame-line)) right var(--frame-inset) top var(--frame-inset) / 1px calc(100% - (2 * var(--frame-inset))) no-repeat,
+    repeating-linear-gradient(90deg, var(--frame-line) 0 1px, transparent 1px 120px) left var(--frame-inset) top var(--frame-inset) / calc(100% - (2 * var(--frame-inset))) 0.38rem no-repeat,
+    repeating-linear-gradient(90deg, var(--frame-line) 0 1px, transparent 1px 120px) left var(--frame-inset) bottom var(--frame-inset) / calc(100% - (2 * var(--frame-inset))) 0.38rem no-repeat,
+    repeating-linear-gradient(0deg, var(--frame-line) 0 1px, transparent 1px 120px) left var(--frame-inset) top var(--frame-inset) / 0.38rem calc(100% - (2 * var(--frame-inset))) no-repeat,
+    repeating-linear-gradient(0deg, var(--frame-line) 0 1px, transparent 1px 120px) right var(--frame-inset) top var(--frame-inset) / 0.38rem calc(100% - (2 * var(--frame-inset))) no-repeat;
+}
 a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.18em; }
 .main-nav {
   position: fixed;
-  right: clamp(1rem, 3vw, 2rem);
-  top: clamp(1rem, 3vw, 2rem);
+  right: calc(var(--frame-inset) + clamp(0.7rem, 1.8vw, 1.2rem));
+  top: calc(var(--frame-inset) + clamp(0.7rem, 1.8vw, 1.2rem));
   z-index: 30;
   display: grid;
   width: min(14rem, calc(100vw - 2rem));
-  padding: 0.45rem;
-  background: rgba(255, 255, 255, 0.74);
-  border: 1.5px solid var(--line);
-  box-shadow: inset 0 0 0 1px rgba(18, 18, 15, 0.2);
+  padding: 0.96rem;
+  background: rgba(255, 255, 255, 0.86);
+  border: 0;
   backdrop-filter: blur(12px);
+}
+.main-nav::before {
+  content: "";
+  position: absolute;
+  inset: 0.38rem;
+  pointer-events: none;
+  border: 1px solid rgba(18, 18, 15, 0.52);
 }
 .legend-title {
   display: block;
-  padding: 0.1rem 0.25rem 0.35rem;
+  padding: 0.08rem 0.18rem 0.35rem;
   color: var(--ink);
   font-size: 0.72rem;
   font-weight: 500;
@@ -916,7 +955,7 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
   gap: 0.42rem;
   width: 100%;
   min-height: 2rem;
-  padding: 0.44rem 0.3rem;
+  padding: 0.44rem 0.18rem;
   color: var(--muted);
   font-size: 0.88rem;
   line-height: 1;
