@@ -559,8 +559,8 @@ function contourSegment(x, y, size, values, level) {
 function topographySvg() {
   const width = 1800;
   const height = 7200;
-  const size = 14;
-  const levels = [-0.12, -0.04, 0.03, 0.1, 0.17, 0.24, 0.31, 0.38, 0.45, 0.52, 0.6, 0.68, 0.77, 0.86, 0.96, 1.08, 1.22, 1.38];
+  const size = 16;
+  const levels = [-0.08, 0.02, 0.12, 0.22, 0.32, 0.43, 0.54, 0.66, 0.79, 0.93, 1.08, 1.24, 1.42];
   const lines = [];
   const grid = [];
   const routes = [
@@ -592,21 +592,22 @@ function topographySvg() {
         if (segment) segments.push(segment);
       }
     }
+    if (!segments.length) continue;
     const index = levels.indexOf(level);
-    const major = index % 5 === 0;
-    const opacity = major ? 0.86 : 0.5 + (index % 4) * 0.07;
-    const strokeWidth = major ? 4.2 : 1.35 + (index % 3) * 0.28;
-    const dash = major && index % 10 === 0 ? ' stroke-dasharray="22 16 4 16"' : "";
-    const color = major ? "#3f3f3a" : index % 2 === 0 ? "#73736c" : "#9a9a91";
+    const major = index % 4 === 0;
+    const opacity = major ? 0.34 : 0.2 + (index % 3) * 0.045;
+    const strokeWidth = major ? 1.65 : 0.72 + (index % 3) * 0.12;
+    const dash = major && index % 8 === 0 ? ' stroke-dasharray="18 18 3 18"' : "";
+    const color = major ? "#686862" : index % 2 === 0 ? "#8c8c86" : "#adada7";
     lines.push(`<path d="${segments.join("")}" stroke="${color}" stroke-width="${strokeWidth.toFixed(2)}" opacity="${opacity.toFixed(2)}"${dash}/>`); 
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid slice">
   <defs>
     <linearGradient id="map-bg" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0" stop-color="#f5f1e7"/>
-      <stop offset="0.48" stop-color="#e5dfd2"/>
-      <stop offset="1" stop-color="#d3caba"/>
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.52" stop-color="#f4f3ee"/>
+      <stop offset="1" stop-color="#e7e4dc"/>
     </linearGradient>
     <filter id="hand-drawn" x="-2%" y="-2%" width="104%" height="104%">
       <feTurbulence type="fractalNoise" baseFrequency="0.011 0.027" numOctaves="3" seed="11" result="noise"/>
@@ -614,11 +615,11 @@ function topographySvg() {
     </filter>
   </defs>
   <rect width="${width}" height="${height}" fill="url(#map-bg)"/>
-  <g fill="none" stroke="#6f6f68" stroke-width="0.85" opacity="0.18">
+  <g fill="none" stroke="#9a9a93" stroke-width="0.65" opacity="0.09">
     ${grid.join("\n    ")}
   </g>
-  <g fill="none" stroke="#4a4a45" stroke-linecap="round" stroke-linejoin="round" opacity="0.58">
-    ${routes.map((route, index) => `<path d="${route}" stroke-width="${index % 2 === 0 ? "5.2" : "3.2"}" stroke-dasharray="${index % 2 === 0 ? "25 13 5 13" : "8 18"}"/>`).join("\n    ")}
+  <g fill="none" stroke="#74746e" stroke-linecap="round" stroke-linejoin="round" opacity="0.24">
+    ${routes.slice(0, 4).map((route, index) => `<path d="${route}" stroke-width="${index % 2 === 0 ? "2.2" : "1.45"}" stroke-dasharray="${index % 2 === 0 ? "22 15 4 15" : "7 19"}"/>`).join("\n    ")}
   </g>
   <g fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#hand-drawn)">
     ${lines.join("\n    ")}
@@ -767,7 +768,7 @@ const css = `
 :root {
   --ink: #12120f;
   --muted: #5f5d56;
-  --paper: rgba(246, 242, 232, 0.86);
+  --paper: rgba(255, 255, 255, 0.84);
   --line: #34342f;
   --soft: rgba(18, 18, 15, 0.08);
   --acid: #b6ff00;
@@ -787,7 +788,7 @@ body {
   margin: 0;
   color: var(--ink);
   background-image: url("/assets/generated/topography.svg");
-  background-color: #e6dfd1;
+  background-color: #f4f3ee;
   background-position: center top;
   background-repeat: no-repeat;
   background-size: min(1800px, 170vw) auto;
@@ -815,7 +816,7 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
   display: grid;
   width: min(14rem, calc(100vw - 2rem));
   padding: 0.45rem;
-  background: rgba(246, 242, 232, 0.78);
+  background: rgba(255, 255, 255, 0.74);
   border: 1.5px solid var(--line);
   box-shadow: inset 0 0 0 1px rgba(18, 18, 15, 0.2);
   backdrop-filter: blur(12px);
