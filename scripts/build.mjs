@@ -327,19 +327,12 @@ function mainNav(current = "") {
       <span>${label}</span>
     </a>`;
   return `<nav class="main-nav" aria-label="Main navigation">
-    <span class="legend-title">Map key</span>
+    <span class="legend-title">Legend</span>
     <div class="${itemClass("research")}">
       ${legendLink("research", "/research.html", "Research")}
-      <div class="submenu">
-        <a href="/research.html#technologies">Technologies</a>
-        <a href="/research.html#publications">List of publications</a>
-      </div>
     </div>
     <div class="${itemClass("projects")}">
       ${legendLink("projects", "/projects.html", "Projects")}
-      <div class="submenu">
-        <a href="/projects.html">Artistic collaborations</a>
-      </div>
     </div>
     <div class="${itemClass("media")}">${legendLink("media", "/media.html", "Medias")}</div>
     <div class="${itemClass("teaching")}">${legendLink("teaching", "/teaching.html", "Teaching")}</div>
@@ -357,9 +350,6 @@ function pageShell({ title, description, body, current = "", siteTitle: titleInH
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/"><span>${escapeHtml(titleInHeader)}</span></a>
-  </header>
   ${mainNav(current)}
   ${body}
 </body>
@@ -490,29 +480,39 @@ function valueNoise(x, y, scale) {
 
 function terrainValue(x, y) {
   const peaks = [
-    [250, 720, 210, 0.92],
-    [1520, 960, 190, 1.1],
-    [1380, 1740, 230, 1.22],
-    [420, 2820, 180, 0.9],
-    [1180, 3840, 260, 1.05],
-    [220, 5200, 230, 0.98],
-    [1430, 6100, 210, 1.15],
-    [760, 6800, 180, 0.82],
-    [1680, 7050, 260, 1.0],
-    [1320, 520, 78, 0.28],
-    [250, 1320, 62, 0.24],
-    [1540, 2460, 70, 0.32],
-    [510, 3340, 58, 0.24],
-    [1180, 4920, 64, 0.28],
-    [310, 6040, 70, 0.26],
-    [1480, 6900, 54, 0.24],
+    [210, 620, 190, 0.86],
+    [640, 980, 260, 0.48],
+    [1510, 940, 210, 1.12],
+    [1120, 1500, 260, 0.56],
+    [1390, 1780, 250, 1.24],
+    [430, 2470, 210, 0.78],
+    [970, 3020, 320, 0.44],
+    [1190, 3860, 280, 1.02],
+    [280, 4550, 240, 0.62],
+    [230, 5230, 260, 0.92],
+    [1500, 5750, 300, 0.72],
+    [1450, 6460, 220, 1.08],
+    [740, 6820, 220, 0.86],
+    [1630, 7080, 260, 0.94],
+    [1320, 520, 78, 0.34],
+    [260, 1260, 68, 0.3],
+    [820, 1420, 92, 0.28],
+    [1540, 2380, 76, 0.36],
+    [510, 3340, 60, 0.28],
+    [1340, 3520, 84, 0.34],
+    [1180, 4920, 70, 0.32],
+    [310, 6040, 78, 0.32],
+    [980, 6180, 86, 0.26],
+    [1480, 6900, 58, 0.28],
   ];
   const ridges = [
-    [940, 0, 0.00005, 0.3],
-    [620, 2500, 0.00004, 0.24],
-    [1120, 4600, 0.000035, 0.22],
+    [940, 0, 0.00005, 0.34],
+    [620, 2500, 0.00004, 0.28],
+    [1120, 4600, 0.000035, 0.25],
+    [1540, 1200, 0.000055, 0.2],
+    [360, 6100, 0.00005, 0.22],
   ];
-  let value = -0.22;
+  let value = -0.3;
 
   for (const [cx, cy, radius, strength] of peaks) {
     const dx = x - cx;
@@ -525,12 +525,13 @@ function terrainValue(x, y) {
     value += Math.exp(-Math.abs(x - ridgeX) * Math.abs(x - ridgeX) * falloff) * strength;
   }
 
-  value += valueNoise(x, y, 240) * 0.095;
-  value += valueNoise(x + 400, y - 900, 120) * 0.04;
-  value += valueNoise(x - 180, y + 300, 72) * 0.014;
-  value += valueNoise(x + 1000, y + 1400, 42) * 0.004;
-  value += Math.sin(x * 0.021 + y * 0.009) * 0.017;
-  value += Math.sin(x * 0.034 - y * 0.013 + 2.1) * 0.006;
+  value += valueNoise(x, y, 300) * 0.13;
+  value += valueNoise(x + 400, y - 900, 145) * 0.07;
+  value += valueNoise(x - 180, y + 300, 86) * 0.032;
+  value += valueNoise(x + 1000, y + 1400, 48) * 0.012;
+  value += Math.sin(x * 0.017 + y * 0.010) * 0.035;
+  value += Math.sin(x * 0.031 - y * 0.014 + 2.1) * 0.018;
+  value += Math.sin((x + y) * 0.006) * 0.026;
   return value;
 }
 
@@ -558,16 +559,23 @@ function contourSegment(x, y, size, values, level) {
 function topographySvg() {
   const width = 1800;
   const height = 7200;
-  const size = 12;
-  const levels = [0.16, 0.24, 0.31, 0.39, 0.5, 0.58, 0.67, 0.79, 0.88, 0.99, 1.13];
+  const size = 14;
+  const levels = [-0.12, -0.04, 0.03, 0.1, 0.17, 0.24, 0.31, 0.38, 0.45, 0.52, 0.6, 0.68, 0.77, 0.86, 0.96, 1.08, 1.22, 1.38];
   const lines = [];
   const grid = [];
+  const routes = [
+    "M-60 1770C260 1870 450 1820 690 2000S1190 2210 1880 2070",
+    "M-90 2820C270 2940 630 2760 930 2940S1450 3180 1880 2940",
+    "M-40 4860C330 5000 510 4660 780 4820S1110 5480 1540 5360S1840 5160 1900 5480",
+    "M260 -80C360 460 240 830 540 1120S860 1600 760 2200",
+    "M1580 -120C1440 420 1700 920 1540 1470S1260 2220 1480 2980S1760 4050 1500 4700",
+  ];
 
   for (let x = 0, index = 0; x <= width; x += 120, index += 1) {
-    grid.push(`<path d="M${x} 0V${height}"${index % 2 === 1 ? ' stroke-dasharray="14 18"' : ""}/>`);
+    grid.push(`<path d="M${x} 0V${height}"${index % 2 === 1 ? ' stroke-dasharray="7 22"' : ""}/>`);
   }
   for (let y = 0, index = 0; y <= height; y += 120, index += 1) {
-    grid.push(`<path d="M0 ${y}H${width}"${index % 2 === 1 ? ' stroke-dasharray="14 18"' : ""}/>`);
+    grid.push(`<path d="M0 ${y}H${width}"${index % 2 === 1 ? ' stroke-dasharray="7 22"' : ""}/>`);
   }
 
   for (const level of levels) {
@@ -585,22 +593,34 @@ function topographySvg() {
       }
     }
     const index = levels.indexOf(level);
-    const opacity = (0.09 + index * 0.012).toFixed(3);
-    const strokeWidth = (0.85 + index * 0.07).toFixed(2);
-    lines.push(`<path d="${segments.join("")}" stroke-width="${strokeWidth}" opacity="${opacity}"/>`); 
+    const major = index % 5 === 0;
+    const opacity = major ? 0.86 : 0.5 + (index % 4) * 0.07;
+    const strokeWidth = major ? 4.2 : 1.35 + (index % 3) * 0.28;
+    const dash = major && index % 10 === 0 ? ' stroke-dasharray="22 16 4 16"' : "";
+    const color = major ? "#c6f3ff" : index % 2 === 0 ? "#68d8ff" : "#8de8ff";
+    lines.push(`<path d="${segments.join("")}" stroke="${color}" stroke-width="${strokeWidth.toFixed(2)}" opacity="${opacity.toFixed(2)}"${dash}/>`); 
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid slice">
   <defs>
+    <linearGradient id="map-bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#315f92"/>
+      <stop offset="0.42" stop-color="#0c4773"/>
+      <stop offset="1" stop-color="#032545"/>
+    </linearGradient>
     <filter id="hand-drawn" x="-2%" y="-2%" width="104%" height="104%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.018 0.031" numOctaves="2" seed="11" result="noise"/>
-      <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.011 0.027" numOctaves="3" seed="11" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3.8" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
   </defs>
-  <g fill="none" stroke="#050505" stroke-width="1.05" opacity="0.105">
+  <rect width="${width}" height="${height}" fill="url(#map-bg)"/>
+  <g fill="none" stroke="#79dfff" stroke-width="0.85" opacity="0.16">
     ${grid.join("\n    ")}
   </g>
-  <g fill="none" stroke="#050505" stroke-linecap="round" stroke-linejoin="round" filter="url(#hand-drawn)">
+  <g fill="none" stroke="#d8fbff" stroke-linecap="round" stroke-linejoin="round" opacity="0.74">
+    ${routes.map((route, index) => `<path d="${route}" stroke-width="${index % 2 === 0 ? "5.2" : "3.2"}" stroke-dasharray="${index % 2 === 0 ? "25 13 5 13" : "8 18"}"/>`).join("\n    ")}
+  </g>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#hand-drawn)">
     ${lines.join("\n    ")}
   </g>
 </svg>`;
@@ -745,16 +765,16 @@ const css = `
 }
 
 :root {
-  --ink: #050505;
-  --muted: #515151;
-  --paper: #ffffff;
-  --line: #050505;
-  --soft: #f4f4f4;
+  --ink: #e9fbff;
+  --muted: #a7d7e8;
+  --paper: rgba(5, 31, 55, 0.82);
+  --line: #c6f3ff;
+  --soft: rgba(198, 243, 255, 0.13);
   --acid: #b6ff00;
   --red: #ff4b4b;
   --blue: #2248ff;
-  --grid: rgba(5, 5, 5, 0.028);
-  --grid-strong: rgba(5, 5, 5, 0.045);
+  --grid: rgba(198, 243, 255, 0.11);
+  --grid-strong: rgba(198, 243, 255, 0.18);
   --font-body: "Avenir Next", "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-display: "Avenir Next Condensed", "DIN Condensed", "Helvetica Neue", Arial, sans-serif;
   --font-title: "Geist Mono", "Avenir Next Condensed", "DIN Condensed", sans-serif;
@@ -767,7 +787,7 @@ body {
   margin: 0;
   color: var(--ink);
   background-image: url("/assets/generated/topography.svg");
-  background-color: var(--paper);
+  background-color: #062944;
   background-position: center top;
   background-repeat: no-repeat;
   background-size: min(1800px, 170vw) auto;
@@ -784,45 +804,20 @@ body::before {
   background-image: url("/assets/generated/paper-grain.svg");
   background-size: 220px 220px;
   opacity: 0.14;
-  mix-blend-mode: multiply;
+  mix-blend-mode: screen;
 }
 a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.18em; }
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  padding: 0.85rem clamp(1rem, 3vw, 2rem);
-  background: color-mix(in srgb, #ecece7 92%, transparent);
-  border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(12px);
-}
-.brand {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  text-decoration: none;
-}
-.brand img {
-  width: 4.5rem;
-  height: auto;
-}
-.brand span {
-  font-family: var(--font-title);
-  font-weight: 300;
-  letter-spacing: 0;
-}
 .main-nav {
   position: fixed;
   right: clamp(1rem, 3vw, 2rem);
-  bottom: clamp(1rem, 3vw, 2rem);
+  top: clamp(1rem, 3vw, 2rem);
   z-index: 30;
   display: grid;
   width: min(14rem, calc(100vw - 2rem));
   padding: 0.45rem;
-  background: color-mix(in srgb, var(--paper) 88%, transparent);
-  border: 1.5px solid var(--ink);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 28%, transparent);
+  background: rgba(3, 26, 47, 0.78);
+  border: 1.5px solid var(--line);
+  box-shadow: inset 0 0 0 1px rgba(198, 243, 255, 0.32);
   backdrop-filter: blur(12px);
 }
 .legend-title {
@@ -854,10 +849,10 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
 .nav-item.active .legend-link {
   color: var(--ink);
   background:
-    linear-gradient(90deg, rgba(5, 5, 5, 0.045) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(5, 5, 5, 0.045) 1px, transparent 1px);
+    linear-gradient(90deg, rgba(198, 243, 255, 0.13) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(198, 243, 255, 0.13) 1px, transparent 1px);
   background-size: 8px 8px;
-  box-shadow: inset 0 0 0 1px var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 .legend-symbol {
   position: relative;
@@ -866,7 +861,7 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
   width: 1.15rem;
   height: 1.15rem;
   place-items: center;
-  color: var(--ink);
+  color: var(--line);
 }
 .legend-symbol::before,
 .legend-symbol::after {
@@ -930,34 +925,6 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
   border-left: 1.5px solid currentColor;
   transform: rotate(32deg);
   transform-origin: bottom center;
-}
-.submenu {
-  position: static;
-  z-index: 20;
-  display: none;
-  margin: 0 0 0.3rem 1.58rem;
-  padding: 0.28rem 0 0.2rem 0.45rem;
-  background: transparent;
-  border-left: 1px solid var(--ink);
-}
-.nav-item:hover .submenu,
-.nav-item:focus-within .submenu {
-  display: grid;
-  gap: 0.2rem;
-}
-.submenu a,
-.submenu span {
-  display: block;
-  padding: 0.35rem 0.45rem;
-  color: var(--ink);
-  text-decoration: none;
-  white-space: nowrap;
-}
-.submenu a:hover {
-  background: #ecece7;
-}
-.submenu span {
-  color: var(--muted);
 }
 main { width: min(1200px, calc(100% - 2rem)); margin: 0 auto; }
 .hero {
@@ -1111,7 +1078,7 @@ section { padding: clamp(3rem, 7vw, 6rem) 0; }
   background: var(--paper);
   text-decoration: none;
 }
-.links-row a:hover { background: #ecece7; }
+.links-row a:hover { background: rgba(198, 243, 255, 0.16); }
 .links-row span {
   color: var(--muted);
 }
@@ -1276,8 +1243,7 @@ video {
 }
 
 @media (max-width: 860px) {
-  .topbar { position: static; align-items: flex-start; flex-direction: column; }
-  .submenu { position: static; margin-top: 0.35rem; }
+  .main-nav { position: static; width: auto; margin: 1rem; }
   .hero { min-height: auto; }
   .hero-grid { grid-template-columns: 1fr; }
   .portrait-slot { width: min(100%, 320px); }
