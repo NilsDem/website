@@ -8,6 +8,8 @@ links:
   paper: https://arxiv.org/abs/2408.00196
 demos:
   - https://youtu.be/ct9y-z1FL1c
+schematic: /assets/after.png
+schematic_alt: AFTER system schematic
 used_by:
   - Canblaster
   - Björk and Robin Meier

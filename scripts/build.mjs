@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, rm, writeFile, copyFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -5,6 +6,7 @@ import { fileURLToPath } from "node:url";
 const root = dirname(fileURLToPath(import.meta.url)).replace(/\/scripts$/, "");
 const contentDir = join(root, "content");
 const distDir = join(root, "dist");
+const mapCacheDir = join(root, ".cache/generated-maps");
 const geistFontsDir = join(root, "node_modules/geist/dist/fonts");
 
 const args = new Set(process.argv.slice(2));
@@ -218,6 +220,19 @@ function chips(values) {
   return `<div class="chips">${list.map((value) => `<span>${escapeHtml(value)}</span>`).join("")}</div>`;
 }
 
+function entryChips(entry) {
+  if (entry.section === "works") return "";
+  return chips(entry.technologies || entry.tool);
+}
+
+function schematicFigure(entry) {
+  if (!entry.schematic) return "";
+  const alt = entry.schematic_alt || `${entry.title} schematic`;
+  return `<figure class="entry-schematic">
+    <img src="${escapeHtml(entry.schematic)}" alt="${escapeHtml(alt)}" loading="lazy">
+  </figure>`;
+}
+
 function card(entry) {
   return `<article class="card ${entry.featured ? "featured" : ""}">
     <a class="card-link" href="${entry.url}">
@@ -225,7 +240,7 @@ function card(entry) {
       <h3>${escapeHtml(entry.title)}</h3>
       ${metaLine(entry) ? `<p class="meta">${metaLine(entry)}</p>` : ""}
       <p>${escapeHtml(entry.summary || entry.body.split(/\n/)[0] || "")}</p>
-      ${chips(entry.technologies || entry.tool)}
+      ${entryChips(entry)}
     </a>
   </article>`;
 }
@@ -327,7 +342,7 @@ function mainNav(current = "") {
       <span>${label}</span>
     </a>`;
   return `<nav class="main-nav" aria-label="Main navigation">
-    <a class="legend-title" href="/">Nils Demerlé</a>
+    <a class="legend-title${current ? "" : " active"}" href="/"${current ? "" : ' aria-current="page"'}>Nils Demerlé</a>
     <div class="${itemClass("research")}">
       ${legendLink("research", "/research.html", "Research")}
     </div>
@@ -353,6 +368,32 @@ function pageShell({ title, description, body, current = "", siteTitle: titleInH
 <body class="map-${escapeHtml(mapId)}">
   ${mainNav(current)}
   ${body}
+  <div class="coordinate-readout" aria-live="off">LAT 48.85660 N / LONG 2.35220 E</div>
+  <script>
+    (() => {
+      const readout = document.querySelector(".coordinate-readout");
+      if (!readout) return;
+      const origin = { lat: 48.8566, lon: 2.3522 };
+      const span = { lat: 0.082, lon: 0.14, scrollLat: 0.000018, scrollLon: 0.000006 };
+      let pointer = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      const format = (value, positive, negative) => Math.abs(value).toFixed(5) + " " + (value >= 0 ? positive : negative);
+      const update = () => {
+        const nx = pointer.x / Math.max(window.innerWidth, 1) - 0.5;
+        const ny = pointer.y / Math.max(window.innerHeight, 1) - 0.5;
+        const scroll = window.scrollY || document.documentElement.scrollTop || 0;
+        const lat = origin.lat - ny * span.lat - scroll * span.scrollLat;
+        const lon = origin.lon + nx * span.lon + scroll * span.scrollLon;
+        readout.textContent = "LAT " + format(lat, "N", "S") + " / LONG " + format(lon, "E", "W");
+      };
+      window.addEventListener("pointermove", (event) => {
+        pointer = { x: event.clientX, y: event.clientY };
+        update();
+      }, { passive: true });
+      window.addEventListener("scroll", update, { passive: true });
+      window.addEventListener("resize", update, { passive: true });
+      update();
+    })();
+  </script>
 </body>
 </html>`;
 }
@@ -366,12 +407,14 @@ function entryArticle(entry) {
     <p class="kicker">${escapeHtml(entry.type || entry.section)}</p>
     <h2>${escapeHtml(entry.title)}</h2>
     ${metaLine(entry) ? `<p class="lead meta">${metaLine(entry)}</p>` : ""}
-    ${chips(entry.technologies || entry.tool)}
-    <section class="prose">${entry.bodyHtml}</section>
+    ${entryChips(entry)}
+    <div class="entry-content ${entry.schematic ? "has-schematic" : ""}">
+      <section class="prose">${entry.bodyHtml}</section>
+      ${schematicFigure(entry)}
+    </div>
     ${mediaEmbed(entry)}
     ${youtubeEmbedGrid(demoUrls)}
     ${youtubeEmbeds(entry)}
-    ${valueList("Used by", entry.used_by)}
     ${linkList(entry.links || nonYouTubeLinks(entry.files))}
   </article>`;
 }
@@ -616,6 +659,39 @@ function topographySvg({ x: offsetX = 0, y: offsetY = 0, filterSeed = 11 } = {})
 </svg>`;
 }
 
+function mapCacheKey(variant) {
+  const source = [
+    "map-cache-v1",
+    fade.toString(),
+    mix.toString(),
+    hash2.toString(),
+    valueNoise.toString(),
+    terrainValue.toString(),
+    contourSegment.toString(),
+    topographySvg.toString(),
+    JSON.stringify(variant),
+  ].join("\n");
+
+  return createHash("sha256").update(source).digest("hex").slice(0, 16);
+}
+
+async function writeCachedTopography(variant) {
+  const target = join(distDir, "assets/generated", variant.file);
+  const cacheFile = join(mapCacheDir, `${variant.file.replace(/\.svg$/, "")}-${mapCacheKey(variant)}.svg`);
+
+  try {
+    await copyFile(cacheFile, target);
+    return;
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+
+  const svg = topographySvg(variant);
+  await mkdir(mapCacheDir, { recursive: true });
+  await writeFile(cacheFile, svg, "utf8");
+  await copyFile(cacheFile, target);
+}
+
 function paperGrainSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220">
   <filter id="grain">
@@ -648,10 +724,8 @@ async function build() {
   await copyDir(join(root, "assets"), join(distDir, "assets"));
   await mkdir(join(distDir, "assets/generated"), { recursive: true });
   await copyGeistFonts();
-  await Promise.all(Object.values(mapVariants).map((variant) =>
-    writeFile(join(distDir, "assets/generated", variant.file), topographySvg(variant), "utf8")
-  ));
-  await writeFile(join(distDir, "assets/generated/topography.svg"), topographySvg(mapVariants.home), "utf8");
+  await Promise.all(Object.values(mapVariants).map((variant) => writeCachedTopography(variant)));
+  await copyFile(join(distDir, "assets/generated", mapVariants.home.file), join(distDir, "assets/generated/topography.svg"));
   await writeFile(join(distDir, "assets/generated/paper-grain.svg"), paperGrainSvg(), "utf8");
   await writeFile(join(distDir, "styles.css"), css, "utf8");
 
@@ -769,8 +843,8 @@ const css = `
   --grid: rgba(18, 18, 15, 0.065);
   --grid-strong: rgba(18, 18, 15, 0.12);
   --map-image: url("/assets/generated/topography-home.svg");
-  --font-body: "Avenir Next", "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Avenir Next Condensed", "DIN Condensed", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Geist Mono", "Avenir Next", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Geist Mono", "Avenir Next Condensed", "DIN Condensed", "Helvetica Neue", Arial, sans-serif;
   --font-title: "Geist Mono", "Avenir Next Condensed", "DIN Condensed", sans-serif;
   --font-mono: "Geist Mono", "SFMono-Regular", Consolas, monospace;
 }
@@ -821,15 +895,17 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
 }
 .legend-title {
   display: block;
-  padding: 0.1rem 0.25rem 0.5rem;
+  padding: 0.1rem 0.25rem 0.35rem;
   color: var(--ink);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1;
   text-transform: uppercase;
   text-decoration: none;
   white-space: nowrap;
-  border-bottom: 1px solid var(--ink);
+}
+.legend-title.active {
+  font-weight: 800;
 }
 .nav-item {
   position: relative;
@@ -866,6 +942,20 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
 .legend-symbol::after {
   content: "";
   display: block;
+}
+.coordinate-readout {
+  position: fixed;
+  right: clamp(0.7rem, 2vw, 1.2rem);
+  bottom: clamp(0.55rem, 1.6vw, 1rem);
+  z-index: 25;
+  color: rgba(18, 18, 15, 0.58);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  pointer-events: none;
+  user-select: none;
 }
 .legend-research::before {
   width: 1.08rem;
@@ -994,7 +1084,7 @@ h1 {
 }
 .hero h1 {
   font-family: var(--font-title);
-  font-weight: 400;
+  font-weight: 300;
 }
 h2 { margin: 0; font-size: clamp(1.8rem, 4vw, 3.7rem); max-width: none; }
 h3 { margin: 0.5rem 0; font-size: 1.25rem; }
@@ -1087,13 +1177,15 @@ section { padding: clamp(3rem, 7vw, 6rem) 0; }
   gap: 1rem;
 }
 .category {
-  max-width: 980px;
+  max-width: 1160px;
   padding: clamp(3rem, 7vw, 6rem) 0;
 }
 .category-head {
-  margin-bottom: clamp(2rem, 5vw, 4rem);
+  margin-bottom: clamp(1.4rem, 3.5vw, 2.8rem);
 }
 .category-head h1 {
+  font-family: var(--font-title);
+  font-weight: 300;
   max-width: 12ch;
 }
 .category-summary {
@@ -1104,25 +1196,48 @@ section { padding: clamp(3rem, 7vw, 6rem) 0; }
 }
 .entry-list {
   display: grid;
-  gap: clamp(2.5rem, 6vw, 5rem);
+  gap: clamp(1.6rem, 4vw, 3.4rem);
 }
 .entry-block {
-  padding: clamp(1.5rem, 4vw, 3rem) 0;
+  padding: clamp(1rem, 2.8vw, 2rem) 0;
 }
 .entry-block h2 {
   white-space: normal;
 }
 .entry-block .lead {
   max-width: 100%;
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
+}
+.entry-block .lead.meta {
+  color: rgba(18, 18, 15, 0.82);
+  font-size: clamp(1.02rem, 1.18vw, 1.18rem);
 }
 .entry-block .chips {
   width: fit-content;
-  margin-top: 0.9rem;
+  margin-top: 0.55rem;
   padding-top: 0;
 }
 .entry-block .links-row {
-  margin-top: 1rem;
+  margin-top: 0.65rem;
+}
+.entry-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1rem, 3vw, 2rem);
+  align-items: start;
+  margin-top: 0.25rem;
+}
+.entry-content.has-schematic {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 32%);
+}
+.entry-schematic {
+  margin: clamp(1rem, 2.4vw, 2rem) 0 0;
+  padding: 0;
+}
+.entry-schematic img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 .entry-note {
   max-width: 68ch;
@@ -1172,7 +1287,12 @@ video {
   max-width: 860px;
   padding: clamp(3rem, 7vw, 6rem) 0;
 }
-.detail h1 { max-width: 14ch; font-size: clamp(3rem, 8vw, 7rem); }
+.detail h1 {
+  max-width: 14ch;
+  font-family: var(--font-title);
+  font-size: clamp(3rem, 8vw, 7rem);
+  font-weight: 300;
+}
 .back { display: inline-block; margin-bottom: 2rem; color: var(--muted); }
 .detail .lead {
   max-width: 100%;
@@ -1187,11 +1307,13 @@ video {
   padding-top: 0;
 }
 .prose {
-  margin-top: 0.5rem;
-  padding: clamp(1.5rem, 3.5vw, 3rem) 0;
-  font-size: 1.08rem;
+  margin-top: 0.35rem;
+  padding: clamp(0.55rem, 1.7vw, 1.35rem) 0;
+  font-size: 1.14rem;
+  text-align: justify;
+  text-justify: inter-word;
 }
-.prose p { max-width: 68ch; }
+.prose p { max-width: 78ch; }
 .prose p:last-child { margin-bottom: 0; }
 .media-link { display: inline-block; margin-top: 1rem; word-break: break-word; }
 .press-prose {
@@ -1251,6 +1373,8 @@ video {
   .lead { margin-left: 0; }
   .section-head { display: block; }
   .grid, .grid.compact, .media-grid, .people-grid { grid-template-columns: 1fr; }
+  .entry-content.has-schematic { grid-template-columns: 1fr; }
+  .prose { text-align: left; }
   .youtube-grid { grid-template-columns: 1fr; }
   .card { min-height: auto; }
 }
