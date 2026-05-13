@@ -327,7 +327,7 @@ function mainNav(current = "") {
       <span>${label}</span>
     </a>`;
   return `<nav class="main-nav" aria-label="Main navigation">
-    <span class="legend-title">Legend</span>
+    <a class="legend-title" href="/">Nils Demerlé</a>
     <div class="${itemClass("research")}">
       ${legendLink("research", "/research.html", "Research")}
     </div>
@@ -802,12 +802,14 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
   backdrop-filter: blur(12px);
 }
 .legend-title {
+  display: block;
   padding: 0.1rem 0.25rem 0.5rem;
   color: var(--ink);
   font-size: 0.72rem;
   font-weight: 800;
   line-height: 1;
   text-transform: uppercase;
+  text-decoration: none;
   white-space: nowrap;
   border-bottom: 1px solid var(--ink);
 }
@@ -829,11 +831,9 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
 .nav-item:hover .legend-link,
 .nav-item.active .legend-link {
   color: var(--ink);
-  background:
-    linear-gradient(90deg, rgba(18, 18, 15, 0.08) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(18, 18, 15, 0.08) 1px, transparent 1px);
-  background-size: 8px 8px;
-  box-shadow: inset 0 0 0 1px var(--line);
+}
+.nav-item.active .legend-link {
+  font-weight: 800;
 }
 .legend-symbol {
   position: relative;
