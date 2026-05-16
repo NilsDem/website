@@ -4,9 +4,10 @@ tagline: Nils Demerlé
 summary: Personal website for research, artistic projects, media, and teaching.
 portrait: assets/me.jpg
 links:
+  Email: mailto:demerle@ircam.fr
   Instagram: https://www.instagram.com/granaparamo/
   Scholar: https://scholar.google.com/citations?user=27Pdhc8AAAAJ&hl=fr
-  GitHub: https://github.com/acids-ircam
+  GitHub: https://github.com/nilsdem
 ---
 
 I am a researcher and artist working at the intersection of machine learning, audio synthesis, and musical creation.

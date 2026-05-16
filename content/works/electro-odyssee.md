@@ -4,12 +4,12 @@ composer: Molecule
 date: 2026-03-25
 location: Enghien-les-Bains
 place: IRCAM
-type: collaboration
+# type: collaboration
 technologies: [AFTER, RAVE]
 featured: true
 summary: Live performance for IRCAM Electro Odyssée.
 files:
-  - https://youtu.be/3QmsZQ3zNss
+  # - https://youtu.be/3QmsZQ3zNss
   - https://youtu.be/9yIq9SgOn9U
 ---
 

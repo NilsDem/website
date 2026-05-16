@@ -8,6 +8,7 @@ const contentDir = join(root, "content");
 const distDir = join(root, "dist");
 const mapCacheDir = join(root, ".cache/generated-maps");
 const geistFontsDir = join(root, "node_modules/geist/dist/fonts");
+const fontsourceDir = join(root, "node_modules/@fontsource");
 
 const args = new Set(process.argv.slice(2));
 
@@ -197,10 +198,22 @@ function nonYouTubeLinks(links) {
 }
 
 function youtubeEmbedGrid(urls = []) {
-  const ids = [...new Set(urls.map(extractYouTubeId).filter(Boolean))];
-  if (!ids.length) return "";
+  const seen = new Set();
+  const embeds = [];
+  for (const url of urls) {
+    const youtubeId = extractYouTubeId(url);
+    const key = youtubeId ? `youtube:${youtubeId}` : String(url);
+    if (!url || seen.has(key)) continue;
+    seen.add(key);
+    if (youtubeId) {
+      embeds.push(`<iframe src="https://www.youtube.com/embed/${escapeHtml(youtubeId)}" title="Demo video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`);
+    } else if (/\.mp4(?:$|\?)/i.test(String(url))) {
+      embeds.push(`<video controls preload="metadata" src="${escapeHtml(String(url))}"></video>`);
+    }
+  }
+  if (!embeds.length) return "";
   return `<section class="youtube-grid" aria-label="Demo videos">
-    ${ids.map((id) => `<iframe src="https://www.youtube.com/embed/${escapeHtml(id)}" title="Demo video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`).join("")}
+    ${embeds.join("")}
   </section>`;
 }
 
@@ -336,21 +349,27 @@ function sectionLabel(section = "") {
 }
 
 function mainNav(current = "") {
-  const itemClass = (id) => (current === id ? "nav-item active" : "nav-item");
-  const legendLink = (id, href, label) => `<a class="legend-link" href="${href}"${current === id ? ' aria-current="page"' : ""}>
+  const currentId = current || "home";
+  const itemClass = (id) => (currentId === id ? "nav-item active" : "nav-item");
+  const legendLink = (id, href, label) => `<a class="legend-link" href="${href}"${currentId === id ? ' aria-current="page"' : ""}>
       <span class="legend-symbol legend-${id}" aria-hidden="true"></span>
       <span>${label}</span>
     </a>`;
   return `<nav class="main-nav" aria-label="Main navigation">
-    <a class="legend-title${current ? "" : " active"}" href="/"${current ? "" : ' aria-current="page"'}>Nils Demerlé</a>
-    <div class="${itemClass("research")}">
-      ${legendLink("research", "/research.html", "Research")}
+    <div class="legend-items">
+      <div class="${itemClass("home")}">
+        ${legendLink("home", "/", "Home")}
+      </div>
+      <div class="${itemClass("projects")}">
+      ${legendLink("projects", "/projects.html", "Works")}
+      </div>
+      <div class="${itemClass("research")}">
+        ${legendLink("research", "/research.html", "Research")}
+      
+      </div>
+      <div class="${itemClass("media")}">${legendLink("media", "/media.html", "Medias")}</div>
+      <div class="${itemClass("teaching")}">${legendLink("teaching", "/teaching.html", "Teaching")}</div>
     </div>
-    <div class="${itemClass("projects")}">
-      ${legendLink("projects", "/projects.html", "Projects")}
-    </div>
-    <div class="${itemClass("media")}">${legendLink("media", "/media.html", "Medias")}</div>
-    <div class="${itemClass("teaching")}">${legendLink("teaching", "/teaching.html", "Teaching")}</div>
   </nav>`;
 }
 
@@ -375,13 +394,27 @@ function pageShell({ title, description, body, current = "", siteTitle: titleInH
       if (!readout) return;
       const origin = { lat: 48.8566, lon: 2.3522 };
       const span = { lat: 0.082, lon: 0.14, scrollLat: 0.000018, scrollLon: 0.000006 };
+      const mapVariant = ${JSON.stringify(mapVariants.home)};
+      ${fade.toString()}
+      ${mix.toString()}
+      ${hash2.toString()}
+      ${valueNoise.toString()}
+      ${terrainValue.toString()}
       let pointer = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
       const format = (value, positive, negative) => Math.abs(value).toFixed(5) + " " + (value >= 0 ? positive : negative);
-      const altitude = (x, y) => {
-        const ridge = Math.sin(x * 0.017 + y * 0.010) * 38 + Math.sin(x * 0.031 - y * 0.014 + 2.1) * 22;
-        const hills = Math.sin((x - 220) * 0.008) * Math.cos((y + 80) * 0.006) * 120;
-        const detail = Math.sin((x + y) * 0.021) * 18;
-        return Math.round(180 + ridge + hills + detail);
+      const mapPoint = (screenX, screenY, scroll) => {
+        const width = Math.min(1800, window.innerWidth * 1.7);
+        const left = (window.innerWidth - width) / 2;
+        const scale = 1800 / width;
+        return {
+          x: (screenX - left) * scale + mapVariant.x,
+          y: (screenY + scroll) * scale + mapVariant.y,
+        };
+      };
+      const altitude = (screenX, screenY, scroll) => {
+        const point = mapPoint(screenX, screenY, scroll);
+        const height = terrainValue(point.x, point.y);
+        return Math.round(80 + height * 720);
       };
       const update = () => {
         const nx = pointer.x / Math.max(window.innerWidth, 1) - 0.5;
@@ -389,9 +422,7 @@ function pageShell({ title, description, body, current = "", siteTitle: titleInH
         const scroll = window.scrollY || document.documentElement.scrollTop || 0;
         const lat = origin.lat - ny * span.lat - scroll * span.scrollLat;
         const lon = origin.lon + nx * span.lon + scroll * span.scrollLon;
-        const mapX = pointer.x + window.innerWidth * 0.5;
-        const mapY = pointer.y + scroll;
-        readout.textContent = "LAT " + format(lat, "N", "S") + " / LONG " + format(lon, "E", "W") + " / ALT " + altitude(mapX, mapY) + " M";
+        readout.textContent = "LAT " + format(lat, "N", "S") + " / LONG " + format(lon, "E", "W") + " / ALT " + altitude(pointer.x, pointer.y, scroll) + " M";
       };
       window.addEventListener("pointermove", (event) => {
         pointer = { x: event.clientX, y: event.clientY };
@@ -432,7 +463,6 @@ function categoryPage({ title, kicker, description, current, introHtml = "", ent
     <header class="category-head">
       <p class="kicker">${escapeHtml(kicker)}</p>
       <h1>${escapeHtml(title)}</h1>
-      ${description ? `<p class="category-summary">${escapeHtml(description)}</p>` : ""}
       ${introHtml ? `<div class="press-prose">${introHtml}</div>` : ""}
     </header>
     <div class="entry-list">
@@ -448,7 +478,6 @@ function researchPage({ academicResearch, tech }) {
     <header class="category-head">
       <p class="kicker">Research</p>
       <h1>Research</h1>
-      <p class="category-summary">Technologies, software contributions, demo material, references, and formal publications.</p>
     </header>
     <section id="technologies" class="entry-list">
       ${tech.map(entryArticle).join("")}
@@ -503,6 +532,45 @@ async function copyGeistFonts() {
   ]);
 }
 
+async function copyFontsourceFonts() {
+  const targetDir = join(distDir, "assets/generated/fonts");
+  await mkdir(targetDir, { recursive: true });
+  await Promise.all([
+    copyFile(
+      join(fontsourceDir, "barlow-condensed/files/barlow-condensed-latin-300-normal.woff2"),
+      join(targetDir, "barlow-condensed-latin-300-normal.woff2"),
+    ),
+    copyFile(
+      join(fontsourceDir, "barlow-condensed/files/barlow-condensed-latin-400-normal.woff2"),
+      join(targetDir, "barlow-condensed-latin-400-normal.woff2"),
+    ),
+    copyFile(
+      join(fontsourceDir, "barlow-condensed/files/barlow-condensed-latin-700-normal.woff2"),
+      join(targetDir, "barlow-condensed-latin-700-normal.woff2"),
+    ),
+    copyFile(
+      join(fontsourceDir, "ibm-plex-sans-condensed/files/ibm-plex-sans-condensed-latin-400-normal.woff2"),
+      join(targetDir, "ibm-plex-sans-condensed-latin-400-normal.woff2"),
+    ),
+    copyFile(
+      join(fontsourceDir, "ibm-plex-sans-condensed/files/ibm-plex-sans-condensed-latin-500-normal.woff2"),
+      join(targetDir, "ibm-plex-sans-condensed-latin-500-normal.woff2"),
+    ),
+    copyFile(
+      join(fontsourceDir, "ibm-plex-sans-condensed/files/ibm-plex-sans-condensed-latin-700-normal.woff2"),
+      join(targetDir, "ibm-plex-sans-condensed-latin-700-normal.woff2"),
+    ),
+    copyFile(
+      join(fontsourceDir, "roboto-condensed/files/roboto-condensed-latin-300-normal.woff2"),
+      join(targetDir, "roboto-condensed-latin-300-normal.woff2"),
+    ),
+    copyFile(
+      join(fontsourceDir, "roboto-condensed/files/roboto-condensed-latin-700-normal.woff2"),
+      join(targetDir, "roboto-condensed-latin-700-normal.woff2"),
+    ),
+  ]);
+}
+
 function fade(value) {
   return value * value * (3 - 2 * value);
 }
@@ -531,6 +599,11 @@ function valueNoise(x, y, scale) {
 }
 
 function terrainValue(x, y) {
+  const warpX = valueNoise(x + 960, y - 420, 560) * 78 + valueNoise(x - 260, y + 1540, 190) * 24;
+  const warpY = valueNoise(x - 680, y + 820, 620) * 92 + valueNoise(x + 1480, y - 260, 210) * 26;
+  x += warpX;
+  y += warpY;
+
   const peaks = [
     [210, 620, 190, 0.86],
     [640, 980, 260, 0.48],
@@ -564,6 +637,13 @@ function terrainValue(x, y) {
     [1540, 1200, 0.000055, 0.2],
     [360, 6100, 0.00005, 0.22],
   ];
+  const basins = [
+    [900, 720, 360, 0.22],
+    [820, 2040, 430, 0.2],
+    [1020, 2860, 500, 0.18],
+    [710, 4140, 420, 0.17],
+    [1040, 5520, 470, 0.2],
+  ];
   let value = -0.3;
 
   for (const [cx, cy, radius, strength] of peaks) {
@@ -577,35 +657,143 @@ function terrainValue(x, y) {
     value += Math.exp(-Math.abs(x - ridgeX) * Math.abs(x - ridgeX) * falloff) * strength;
   }
 
+  for (const [cx, cy, radius, strength] of basins) {
+    const dx = x - cx;
+    const dy = y - cy;
+    value -= Math.exp(-(dx * dx + dy * dy) / (2 * radius * radius)) * strength;
+  }
+
   value += valueNoise(x, y, 300) * 0.13;
   value += valueNoise(x + 400, y - 900, 145) * 0.07;
   value += valueNoise(x - 180, y + 300, 86) * 0.032;
+  value += valueNoise(x + 720, y - 440, 52) * 0.02;
   value += valueNoise(x + 1000, y + 1400, 48) * 0.012;
   value += Math.sin(x * 0.017 + y * 0.010) * 0.035;
   value += Math.sin(x * 0.031 - y * 0.014 + 2.1) * 0.018;
+  value += Math.sin(x * 0.047 + y * 0.028 + 1.7) * 0.011;
   value += Math.sin((x + y) * 0.006) * 0.026;
   return value;
 }
 
 function contourSegment(x, y, size, values, level) {
-  const points = [
-    [x + size * ((level - values[0]) / (values[1] - values[0])), y],
-    [x + size, y + size * ((level - values[1]) / (values[2] - values[1]))],
-    [x + size * ((level - values[3]) / (values[2] - values[3])), y + size],
-    [x, y + size * ((level - values[0]) / (values[3] - values[0]))],
-  ];
+  const pointOnEdge = (x1, y1, v1, x2, y2, v2) => {
+    const delta = v2 - v1;
+    const t = delta === 0 ? 0.5 : (level - v1) / delta;
+    return [x1 + (x2 - x1) * t, y1 + (y2 - y1) * t];
+  };
   const edges = [
-    values[0] < level !== values[1] < level,
-    values[1] < level !== values[2] < level,
-    values[3] < level !== values[2] < level,
-    values[0] < level !== values[3] < level,
+    {
+      active: values[0] < level !== values[1] < level,
+      point: pointOnEdge(x, y, values[0], x + size, y, values[1]),
+    },
+    {
+      active: values[1] < level !== values[2] < level,
+      point: pointOnEdge(x + size, y, values[1], x + size, y + size, values[2]),
+    },
+    {
+      active: values[3] < level !== values[2] < level,
+      point: pointOnEdge(x, y + size, values[3], x + size, y + size, values[2]),
+    },
+    {
+      active: values[0] < level !== values[3] < level,
+      point: pointOnEdge(x, y, values[0], x, y + size, values[3]),
+    },
   ];
-  const active = points.filter((_, index) => edges[index]);
-  if (active.length < 2) return "";
+
+  const active = edges.filter((edge) => edge.active).map((edge) => edge.point);
+  const buildSegment = (a, b) => ({
+    a,
+    b,
+    x: (a[0] + b[0]) / 2,
+    y: (a[1] + b[1]) / 2,
+  });
+
+  if (active.length < 2) return [];
   if (active.length === 4) {
-    return `M${active[0][0].toFixed(1)} ${active[0][1].toFixed(1)}L${active[1][0].toFixed(1)} ${active[1][1].toFixed(1)}M${active[2][0].toFixed(1)} ${active[2][1].toFixed(1)}L${active[3][0].toFixed(1)} ${active[3][1].toFixed(1)}`;
+    return [buildSegment(active[0], active[1]), buildSegment(active[2], active[3])];
   }
-  return `M${active[0][0].toFixed(1)} ${active[0][1].toFixed(1)}L${active[1][0].toFixed(1)} ${active[1][1].toFixed(1)}`;
+  return [buildSegment(active[0], active[1])];
+}
+
+function contourPathData(segments) {
+  const pointKey = (point) => `${point[0].toFixed(1)},${point[1].toFixed(1)}`;
+  const segmentList = segments.map((segment, id) => ({
+    ...segment,
+    id,
+    aKey: pointKey(segment.a),
+    bKey: pointKey(segment.b),
+  }));
+  const byPoint = new Map();
+  const unused = new Set(segmentList.map((segment) => segment.id));
+
+  for (const segment of segmentList) {
+    for (const key of [segment.aKey, segment.bKey]) {
+      if (!byPoint.has(key)) byPoint.set(key, []);
+      byPoint.get(key).push(segment.id);
+    }
+  }
+
+  const nextSegment = (key) => {
+    const ids = byPoint.get(key) || [];
+    return ids.find((id) => unused.has(id));
+  };
+
+  const appendPoint = (points, point) => {
+    const last = points[points.length - 1];
+    if (!last || pointKey(last) !== pointKey(point)) points.push(point);
+  };
+
+  const paths = [];
+  for (const seed of segmentList) {
+    if (!unused.has(seed.id)) continue;
+    unused.delete(seed.id);
+
+    const points = [seed.a, seed.b];
+    let startKey = seed.aKey;
+    let endKey = seed.bKey;
+
+    for (let next = nextSegment(endKey); next !== undefined; next = nextSegment(endKey)) {
+      unused.delete(next);
+      const segment = segmentList[next];
+      const point = segment.aKey === endKey ? segment.b : segment.a;
+      appendPoint(points, point);
+      endKey = segment.aKey === endKey ? segment.bKey : segment.aKey;
+      if (endKey === startKey) break;
+    }
+
+    for (let next = nextSegment(startKey); next !== undefined; next = nextSegment(startKey)) {
+      unused.delete(next);
+      const segment = segmentList[next];
+      const point = segment.aKey === startKey ? segment.b : segment.a;
+      points.unshift(point);
+      startKey = segment.aKey === startKey ? segment.bKey : segment.aKey;
+      if (startKey === endKey) break;
+    }
+
+    if (points.length < 2) continue;
+    let length = 0;
+    let x = 0;
+    let y = 0;
+    for (let index = 0; index < points.length; index += 1) {
+      x += points[index][0];
+      y += points[index][1];
+      if (index > 0) {
+        const dx = points[index][0] - points[index - 1][0];
+        const dy = points[index][1] - points[index - 1][1];
+        length += Math.hypot(dx, dy);
+      }
+    }
+
+    paths.push({
+      d: `M${points.map((point) => `${point[0].toFixed(1)} ${point[1].toFixed(1)}`).join("L")}`,
+      x: x / points.length,
+      y: y / points.length,
+      length,
+      closed: startKey === endKey,
+    });
+  }
+
+  return paths;
 }
 
 const mapVariants = {
@@ -620,9 +808,11 @@ function topographySvg({ x: offsetX = 0, y: offsetY = 0, filterSeed = 11 } = {})
   const width = 1800;
   const height = 7200;
   const size = 12;
-  const levels = [0.16, 0.24, 0.31, 0.39, 0.5, 0.58, 0.67, 0.79, 0.88, 0.99, 1.13];
+  const levels = [0.24, 0.35, 0.44, 0.52, 0.59, 0.67, 0.77, 0.89, 1.04, 1.21];
   const lines = [];
   const grid = [];
+  const hatches = [];
+  const dotBuckets = [[], [], [], [], []];
 
   for (let x = 0, index = 0; x <= width; x += 120, index += 1) {
     grid.push(`<path d="M${x} 0V${height}"${index % 2 === 1 ? ' stroke-dasharray="14 18"' : ""}/>`);
@@ -631,7 +821,37 @@ function topographySvg({ x: offsetX = 0, y: offsetY = 0, filterSeed = 11 } = {})
     grid.push(`<path d="M0 ${y}H${width}"${index % 2 === 1 ? ' stroke-dasharray="14 18"' : ""}/>`);
   }
 
-  for (const level of levels) {
+  for (let y = -height; y < height + width; y += 8) {
+    const drift = valueNoise(y + offsetX, filterSeed * 120 + offsetY, 260) * 18;
+    const strokeWidth = 0.2 + hash2(y * 0.018, filterSeed) * 0.16;
+    const opacity = 0.052 + hash2(y * 0.025, filterSeed + 4) * 0.036;
+    hatches.push(`<path d="M-64 ${(y + drift - 64).toFixed(1)}L${width + 64} ${(y + drift + width + 64).toFixed(1)}" stroke-width="${strokeWidth.toFixed(2)}" opacity="${opacity.toFixed(3)}"/>`);
+  }
+
+  for (let y = 8; y < height; y += 8) {
+    for (let x = 8; x < width; x += 8) {
+      const jitterX = (hash2(x * 0.17, y * 0.11) - 0.5) * 5.2;
+      const jitterY = (hash2(x * 0.13 + 9, y * 0.19 - 5) - 0.5) * 5.2;
+      const sampleX = x + jitterX;
+      const sampleY = y + jitterY;
+      const terrain = terrainValue(sampleX + offsetX, sampleY + offsetY);
+      const basin = Math.max(0, 0.28 - terrain);
+      const high = Math.max(0, terrain - 0.58);
+      const elevated = Math.max(0, terrain - 0.36);
+      const patch = valueNoise(sampleX + offsetX * 0.28 + 280, sampleY + offsetY * 0.21 - 910, 620);
+      const density = 0.16 + basin * 1.45 + high * 0.78 + elevated * 1.65 + Math.max(0, -patch) * 0.16;
+      if (hash2(sampleX * 0.049 - filterSeed, sampleY * 0.043 + filterSeed) > density) continue;
+
+      const radius = (0.26 + hash2(sampleX * 0.027, sampleY * 0.029) * 0.24 + Math.min(0.12, high * 0.06) + Math.min(0.1, basin * 0.08)) * (1 + Math.min(0.15, elevated * 0.22));
+      const opacity = 0.18 + basin * 0.18 + high * 0.12 + Math.min(0.05, elevated * 0.07);
+      const bucket = Math.max(0, Math.min(dotBuckets.length - 1, Math.floor(radius * 8 + opacity * 1.4)));
+      dotBuckets[bucket].push(`M${sampleX.toFixed(1)} ${sampleY.toFixed(1)}h0.01`);
+    }
+  }
+
+  for (const [index, level] of levels.entries()) {
+    const isOuter = index < 2;
+    const isHigh = index > levels.length - 5;
     const segments = [];
     for (let y = -size; y < height + size; y += size) {
       for (let x = -size; x < width + size; x += size) {
@@ -641,27 +861,47 @@ function topographySvg({ x: offsetX = 0, y: offsetY = 0, filterSeed = 11 } = {})
           terrainValue(x + size + offsetX, y + size + offsetY),
           terrainValue(x + offsetX, y + size + offsetY),
         ];
-        const segment = contourSegment(x, y, size, values, level);
-        if (segment) segments.push(segment);
+        segments.push(...contourSegment(x, y, size, values, level));
       }
     }
-    const index = levels.indexOf(level);
-    const opacity = (0.09 + index * 0.012).toFixed(3);
-    const strokeWidth = (0.85 + index * 0.07).toFixed(2);
-    lines.push(`<path d="${segments.join("")}" stroke-width="${strokeWidth}" opacity="${opacity}"/>`); 
+
+    const paths = contourPathData(segments);
+    const baseWidth = isOuter ? 1.04 + index * 0.16 : 0.46 + index * 0.052;
+    const baseOpacity = isOuter ? 0.168 + index * 0.01 : 0.088 + index * 0.008;
+    for (const path of paths) {
+      const sampleX = path.x + offsetX;
+      const sampleY = path.y + offsetY;
+      const broad = valueNoise(sampleX + index * 120, sampleY - index * 70, 430);
+      const seed = hash2(Math.round(path.x / 95) + index * 29 + filterSeed, Math.round(path.y / 95) - index * 11);
+      const lengthBoost = path.length < 210 ? 0.38 : path.length > 1500 ? -0.12 : 0.08;
+      const widthStep = seed > 0.78 ? 0.62 : seed < 0.22 ? -0.24 : 0.06;
+      const strokeWidth = Math.max(0.24, baseWidth + widthStep + broad * 0.18 + lengthBoost + (isHigh ? 0.12 : 0));
+      const opacity = baseOpacity + (seed > 0.78 ? 0.026 : 0) + (path.length < 260 ? 0.016 : 0);
+      lines.push(`<path d="${path.d}" stroke-width="${strokeWidth.toFixed(2)}" opacity="${opacity.toFixed(3)}"/>`);
+    }
   }
 
+  const dotPaths = dotBuckets
+    .map((bucket, index) => {
+      if (bucket.length === 0) return "";
+      const strokeWidth = 0.62 + index * 0.12;
+      const opacity = 0.17 + index * 0.028;
+      return `<path d="${bucket.join("")}" stroke-width="${strokeWidth.toFixed(2)}" opacity="${opacity.toFixed(3)}"/>`;
+    })
+    .filter(Boolean)
+    .join("\n    ");
+
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid slice">
-  <defs>
-    <filter id="hand-drawn" x="-2%" y="-2%" width="104%" height="104%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.018 0.031" numOctaves="2" seed="${filterSeed}" result="noise"/>
-      <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G"/>
-    </filter>
-  </defs>
-  <g fill="none" stroke="#050505" stroke-width="1.05" opacity="0.105">
+  <g fill="none" stroke="#050505" stroke-linecap="round">
+    ${hatches.join("\n    ")}
+  </g>
+  <g fill="none" stroke="#050505" stroke-linecap="round">
+    ${dotPaths}
+  </g>
+  <g fill="none" stroke="#050505" stroke-width="1.05" opacity="0.118">
     ${grid.join("\n    ")}
   </g>
-  <g fill="none" stroke="#050505" stroke-linecap="round" stroke-linejoin="round" filter="url(#hand-drawn)">
+  <g fill="none" stroke="#050505" stroke-linecap="round" stroke-linejoin="round">
     ${lines.join("\n    ")}
   </g>
 </svg>`;
@@ -676,6 +916,7 @@ function mapCacheKey(variant) {
     valueNoise.toString(),
     terrainValue.toString(),
     contourSegment.toString(),
+    contourPathData.toString(),
     topographySvg.toString(),
     JSON.stringify(variant),
   ].join("\n");
@@ -726,13 +967,20 @@ async function build() {
     readPage("academic-research"),
     readPage("teaching-confs"),
   ]);
-  const techOrder = ["rave", "after", "nn", "torchbend", "flowsynth", "junk", "ravetable"];
+  const techOrder = ["after","platune", "rave", "nn"];
   tech.sort((a, b) => techOrder.indexOf(a.slug) - techOrder.indexOf(b.slug));
 
   await copyDir(join(root, "assets"), join(distDir, "assets"));
   await mkdir(join(distDir, "assets/generated"), { recursive: true });
   await copyGeistFonts();
-  await Promise.all(Object.values(mapVariants).map((variant) => writeCachedTopography(variant)));
+  await copyFontsourceFonts();
+  await writeCachedTopography(mapVariants.home);
+  await Promise.all(Object.values(mapVariants)
+    .filter((variant) => variant.file !== mapVariants.home.file)
+    .map((variant) => copyFile(
+      join(distDir, "assets/generated", mapVariants.home.file),
+      join(distDir, "assets/generated", variant.file),
+    )));
   await copyFile(join(distDir, "assets/generated", mapVariants.home.file), join(distDir, "assets/generated/topography.svg"));
   await writeFile(join(distDir, "assets/generated/paper-grain.svg"), paperGrainSvg(), "utf8");
   await writeFile(join(distDir, "styles.css"), css, "utf8");
@@ -838,6 +1086,62 @@ const css = `
   font-style: normal;
   font-display: swap;
 }
+@font-face {
+  font-family: "Barlow Condensed";
+  src: url("/assets/generated/fonts/barlow-condensed-latin-300-normal.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Barlow Condensed";
+  src: url("/assets/generated/fonts/barlow-condensed-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Barlow Condensed";
+  src: url("/assets/generated/fonts/barlow-condensed-latin-700-normal.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Sans Condensed";
+  src: url("/assets/generated/fonts/ibm-plex-sans-condensed-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Sans Condensed";
+  src: url("/assets/generated/fonts/ibm-plex-sans-condensed-latin-500-normal.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Sans Condensed";
+  src: url("/assets/generated/fonts/ibm-plex-sans-condensed-latin-700-normal.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Roboto Condensed";
+  src: url("/assets/generated/fonts/roboto-condensed-latin-300-normal.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Roboto Condensed";
+  src: url("/assets/generated/fonts/roboto-condensed-latin-700-normal.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   --ink: #12120f;
@@ -850,28 +1154,24 @@ const css = `
   --blue: #2248ff;
   --grid: rgba(18, 18, 15, 0.065);
   --grid-strong: rgba(18, 18, 15, 0.12);
-  --paper-bg: #f4f3ee;
-  --frame-inset: clamp(0.9rem, 3vw, 2.4rem);
-  --frame-line: rgba(18, 18, 15, 0.66);
   --map-image: url("/assets/generated/topography-home.svg");
-  --font-body: "Geist Mono", "Avenir Next", "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Geist Mono", "Avenir Next Condensed", "DIN Condensed", "Helvetica Neue", Arial, sans-serif;
-  --font-title: "Geist Mono", "Avenir Next Condensed", "DIN Condensed", sans-serif;
+  --font-body: "Geist Mono", "IBM Plex Sans Condensed", "Avenir Next", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-display:   "Geist Mono", "Roboto Condensed", "SFMono-Regular", "IBM Plex Sans Condensed","Geist Mono", "Avenir Next Condensed", "DIN Condensed", "Helvetica Neue", Arial, sans-serif;
+  --font-title: "Barlow Condensed", "Geist Mono", "Avenir Next Condensed", "DIN Condensed", sans-serif;
   --font-mono: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+  --font-legend-items: "Roboto Condensed", "IBM Plex Sans Condensed", "Geist Mono", "Avenir Next", "Inter", "Helvetica Neue", Arial, sans-serif;
 }
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body {
-  position: relative;
-  min-height: 100vh;
   margin: 0;
   color: var(--ink);
   background-image: var(--map-image);
-  background-color: var(--paper-bg);
-  background-position: var(--frame-inset) var(--frame-inset);
+  background-color: #f7f7f5;
+  background-position: center top;
   background-repeat: no-repeat;
-  background-size: 1800px auto;
+  background-size: min(1800px, 170vw) auto;
   background-attachment: scroll;
   font-family: var(--font-body);
   line-height: 1.45;
@@ -892,59 +1192,23 @@ body::before {
   opacity: 0.14;
   mix-blend-mode: multiply;
 }
-body::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  pointer-events: none;
-  background:
-    linear-gradient(var(--paper-bg), var(--paper-bg)) top left / 100% var(--frame-inset) no-repeat,
-    linear-gradient(var(--paper-bg), var(--paper-bg)) bottom left / 100% var(--frame-inset) no-repeat,
-    linear-gradient(var(--paper-bg), var(--paper-bg)) top left / var(--frame-inset) 100% no-repeat,
-    linear-gradient(var(--paper-bg), var(--paper-bg)) top right / var(--frame-inset) 100% no-repeat,
-    linear-gradient(var(--frame-line), var(--frame-line)) left var(--frame-inset) top var(--frame-inset) / calc(100% - (2 * var(--frame-inset))) 1px no-repeat,
-    linear-gradient(var(--frame-line), var(--frame-line)) left var(--frame-inset) bottom var(--frame-inset) / calc(100% - (2 * var(--frame-inset))) 1px no-repeat,
-    linear-gradient(var(--frame-line), var(--frame-line)) left var(--frame-inset) top var(--frame-inset) / 1px calc(100% - (2 * var(--frame-inset))) no-repeat,
-    linear-gradient(var(--frame-line), var(--frame-line)) right var(--frame-inset) top var(--frame-inset) / 1px calc(100% - (2 * var(--frame-inset))) no-repeat,
-    repeating-linear-gradient(90deg, var(--frame-line) 0 1px, transparent 1px 120px) left var(--frame-inset) top var(--frame-inset) / calc(100% - (2 * var(--frame-inset))) 0.38rem no-repeat,
-    repeating-linear-gradient(90deg, var(--frame-line) 0 1px, transparent 1px 120px) left var(--frame-inset) bottom var(--frame-inset) / calc(100% - (2 * var(--frame-inset))) 0.38rem no-repeat,
-    repeating-linear-gradient(0deg, var(--frame-line) 0 1px, transparent 1px 120px) left var(--frame-inset) top var(--frame-inset) / 0.38rem calc(100% - (2 * var(--frame-inset))) no-repeat,
-    repeating-linear-gradient(0deg, var(--frame-line) 0 1px, transparent 1px 120px) right var(--frame-inset) top var(--frame-inset) / 0.38rem calc(100% - (2 * var(--frame-inset))) no-repeat;
-}
 a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.18em; }
 .main-nav {
   position: fixed;
-  right: calc(var(--frame-inset) + clamp(0.7rem, 1.8vw, 1.2rem));
-  top: calc(var(--frame-inset) + clamp(0.7rem, 1.8vw, 1.2rem));
+  right: clamp(1rem, 3vw, 2rem);
+  top: clamp(1rem, 3vw, 2rem);
   z-index: 30;
   display: grid;
-  width: min(14rem, calc(100vw - 2rem));
-  padding: 0.96rem;
-  background: rgba(255, 255, 255, 0.86);
+  grid-template-columns: max-content;
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+  padding: 1.16rem 0.92rem;
+  background: rgba(253, 252, 249, 0.9);
   border: 0;
   backdrop-filter: blur(12px);
 }
-.main-nav::before {
-  content: "";
-  position: absolute;
-  inset: 0.38rem;
-  pointer-events: none;
-  border: 1px solid rgba(18, 18, 15, 0.52);
-}
-.legend-title {
-  display: block;
-  padding: 0.08rem 0.18rem 0.35rem;
-  color: var(--ink);
-  font-size: 0.72rem;
-  font-weight: 500;
-  line-height: 1;
-  text-transform: uppercase;
-  text-decoration: none;
-  white-space: nowrap;
-}
-.legend-title.active {
-  font-weight: 800;
+.legend-items {
+  min-width: max-content;
 }
 .nav-item {
   position: relative;
@@ -953,12 +1217,15 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
   display: inline-flex;
   align-items: center;
   gap: 0.42rem;
-  width: 100%;
+  width: auto;
   min-height: 2rem;
-  padding: 0.44rem 0.18rem;
+  padding: 0.44rem 0.22rem;
   color: var(--muted);
+  font-family: var(--font-legend-items);
   font-size: 0.88rem;
+  font-weight: 300;
   line-height: 1;
+  text-transform: uppercase;
   text-decoration: none;
 }
 .nav-item:hover .legend-link,
@@ -966,7 +1233,7 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
   color: var(--ink);
 }
 .nav-item.active .legend-link {
-  font-weight: 800;
+  font-weight: 700;
 }
 .legend-symbol {
   position: relative;
@@ -981,6 +1248,19 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
 .legend-symbol::after {
   content: "";
   display: block;
+}
+.legend-home::before {
+  width: 0.78rem;
+  height: 0.78rem;
+  border: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+.legend-home::after {
+  position: absolute;
+  width: 0.34rem;
+  height: 0.34rem;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
 }
 .coordinate-readout {
   position: fixed;
@@ -1054,7 +1334,10 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
   transform: rotate(32deg);
   transform-origin: bottom center;
 }
-main { width: min(1200px, calc(100% - 2rem)); margin: 0 auto; }
+main {
+  width: min(1200px, calc(100% - 2rem));
+  margin: 0 auto;
+}
 .hero {
   position: relative;
   min-height: calc(100vh - 4rem);
@@ -1241,6 +1524,8 @@ section { padding: clamp(3rem, 7vw, 6rem) 0; }
   padding: clamp(1rem, 2.8vw, 2rem) 0;
 }
 .entry-block h2 {
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-weight: 500;
   white-space: normal;
 }
 .entry-block .lead {
@@ -1264,10 +1549,14 @@ section { padding: clamp(3rem, 7vw, 6rem) 0; }
   grid-template-columns: minmax(0, 1fr);
   gap: clamp(1rem, 3vw, 2rem);
   align-items: start;
-  margin-top: 0.25rem;
+  margin-top: 0.12rem;
 }
 .entry-content.has-schematic {
   grid-template-columns: minmax(0, 1fr) minmax(220px, 32%);
+}
+.entry-content:not(.has-schematic) .prose,
+.entry-content:not(.has-schematic) .prose p {
+  max-width: none;
 }
 .entry-schematic {
   margin: clamp(1rem, 2.4vw, 2rem) 0 0;
@@ -1309,6 +1598,7 @@ section { padding: clamp(3rem, 7vw, 6rem) 0; }
 }
 .youtube-grid::before { display: none; }
 .youtube-grid iframe,
+.youtube-grid video,
 .youtube-embed {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -1346,8 +1636,8 @@ video {
   padding-top: 0;
 }
 .prose {
-  margin-top: 0.35rem;
-  padding: clamp(0.55rem, 1.7vw, 1.35rem) 0;
+  margin-top: 0.16rem;
+  padding: clamp(0.28rem, 0.85vw, 0.68rem) 0 clamp(0.55rem, 1.7vw, 1.35rem);
   font-size: 1.14rem;
   text-align: justify;
   text-justify: inter-word;

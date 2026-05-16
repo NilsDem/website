@@ -8,6 +8,9 @@
     "dev": "node scripts/build.mjs --watch"
   },
   "dependencies": {
+    "@fontsource/barlow-condensed": "^5.2.8",
+    "@fontsource/ibm-plex-sans-condensed": "^5.2.8",
+    "@fontsource/roboto-condensed": "^5.2.8",
     "geist": "^1.7.0"
   }
 }
