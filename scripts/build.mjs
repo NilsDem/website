@@ -388,6 +388,7 @@ function mainNav(current = "") {
 
 function pageShell({ title, description, body, current = "", siteTitle: titleInHeader = siteTitle }) {
   const mapId = current || "home";
+  const mapVariant = mapVariants[mapId] || mapVariants.home;
   const cssVersion = createHash("sha1").update(css).digest("hex").slice(0, 10);
   return `<!doctype html>
 <html lang="en">
@@ -408,7 +409,7 @@ function pageShell({ title, description, body, current = "", siteTitle: titleInH
       if (!readout) return;
       const origin = { lat: 48.8566, lon: 2.3522 };
       const span = { lat: 0.082, lon: 0.14, scrollLat: 0.000018, scrollLon: 0.000006 };
-      const mapVariant = ${JSON.stringify(mapVariants.home)};
+      const mapVariant = ${JSON.stringify(mapVariant)};
       ${fade.toString()}
       ${mix.toString()}
       ${hash2.toString()}
@@ -988,13 +989,7 @@ async function build() {
   await mkdir(join(distDir, "assets/generated"), { recursive: true });
   await copyGeistFonts();
   await copyFontsourceFonts();
-  await writeCachedTopography(mapVariants.home);
-  await Promise.all(Object.values(mapVariants)
-    .filter((variant) => variant.file !== mapVariants.home.file)
-    .map((variant) => copyFile(
-      join(distDir, "assets/generated", mapVariants.home.file),
-      join(distDir, "assets/generated", variant.file),
-    )));
+  await Promise.all(Object.values(mapVariants).map((variant) => writeCachedTopography(variant)));
   await copyFile(join(distDir, "assets/generated", mapVariants.home.file), join(distDir, "assets/generated/topography.svg"));
   await writeFile(join(distDir, "assets/generated/paper-grain.svg"), paperGrainSvg(), "utf8");
   await writeFile(join(distDir, "styles.css"), css, "utf8");
