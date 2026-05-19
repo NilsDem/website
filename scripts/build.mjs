@@ -1759,17 +1759,12 @@ video {
   overflow-wrap: anywhere;
 }
 
-@media (min-width: 861px) and (max-width: 1500px) {
-  main {
-    width: min(1200px, calc(100% - 13rem));
-    margin-left: max(1rem, calc((100% - 1200px - 11rem) / 2));
-    margin-right: auto;
-  }
+@media (max-width: 1180px) {
+  .main-nav { position: static; width: auto; margin: 1rem; }
+  main { width: min(1200px, calc(100% - 2rem)); }
 }
 
 @media (max-width: 860px) {
-  .main-nav { position: static; width: auto; margin: 1rem; }
-  main { width: min(1200px, calc(100% - 2rem)); }
   .hero { min-height: auto; }
   .hero-grid { grid-template-columns: 1fr; }
   .portrait-slot { width: min(100%, 320px); }
