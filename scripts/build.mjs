@@ -1349,7 +1349,7 @@ a { color: inherit; text-decoration-thickness: 0.08em; text-underline-offset: 0.
   transform-origin: bottom center;
 }
 main {
-  width: min(1200px, calc(100% - 2rem));
+  width: min(980px, calc(100% - clamp(4rem, 13vw, 12rem)));
   margin: 0 auto;
 }
 .hero {
@@ -1361,11 +1361,11 @@ main {
   overflow: hidden;
 }
 .hero-copy {
-  width: min(100%, 1040px);
+  width: min(100%, 880px);
 }
 .hero-grid {
   display: grid;
-  grid-template-columns: minmax(220px, 340px) minmax(0, 1fr);
+  grid-template-columns: minmax(170px, 270px) minmax(0, 1fr);
   gap: clamp(1.5rem, 4vw, 4rem);
   align-items: center;
 }
@@ -1415,14 +1415,14 @@ h1, h2, h3 { line-height: 1.02; letter-spacing: 0; }
 h1, h2, h3 { font-family: var(--font-display); font-weight: 800; }
 h1 {
   margin: 0;
-  font-size: clamp(3.5rem, 10vw, 9rem);
+  font-size: clamp(3.2rem, 8.3vw, 7.4rem);
   text-transform: uppercase;
 }
 .hero h1 {
   font-family: var(--font-title);
   font-weight: 300;
 }
-h2 { margin: 0; font-size: clamp(1.8rem, 4vw, 3.7rem); max-width: none; }
+h2 { margin: 0; font-size: clamp(1.7rem, 3.6vw, 3.15rem); max-width: none; }
 h3 { margin: 0.5rem 0; font-size: 1.25rem; }
 .lead {
   max-width: 66ch;
@@ -1431,7 +1431,7 @@ h3 { margin: 0.5rem 0; font-size: 1.25rem; }
   color: var(--ink);
 }
 .hero .lead {
-  font-size: 1.14rem;
+  font-size: 0.96rem;
   line-height: 1.45;
   text-align: justify;
   text-justify: inter-word;
@@ -1519,7 +1519,7 @@ section { padding: clamp(3rem, 7vw, 6rem) 0; }
   gap: 1rem;
 }
 .category {
-  max-width: 1160px;
+  max-width: 960px;
   padding: clamp(3rem, 7vw, 6rem) 0;
 }
 .category-head {
@@ -1544,7 +1544,7 @@ section { padding: clamp(3rem, 7vw, 6rem) 0; }
   padding: clamp(1rem, 2.8vw, 2rem) 0;
 }
 .entry-block h2 {
-  font-size: clamp(1.5rem, 3.5vw, 3rem);
+  font-size: clamp(1.42rem, 3vw, 2.55rem);
   font-weight: 500;
   white-space: normal;
 }
@@ -1554,7 +1554,7 @@ section { padding: clamp(3rem, 7vw, 6rem) 0; }
 }
 .entry-block .lead.meta {
   color: rgba(18, 18, 15, 0.82);
-  font-size: clamp(1.02rem, 1.18vw, 1.18rem);
+  font-size: clamp(0.98rem, 1.12vw, 1.1rem);
 }
 .entry-block .chips {
   width: fit-content;
@@ -1607,7 +1607,7 @@ section { padding: clamp(3rem, 7vw, 6rem) 0; }
 .publications-block .prose h3 {
   margin: clamp(2.1rem, 4vw, 3.2rem) 0 0.35rem;
   font-family: var(--font-body);
-  font-size: clamp(1.22rem, 1.58vw, 1.52rem);
+  font-size: clamp(1.08rem, 1.28vw, 1.24rem);
   font-weight: 650;
   line-height: 1.16;
   text-align: left;
@@ -1678,24 +1678,24 @@ video {
 .prose {
   margin-top: 0.16rem;
   padding: clamp(0.28rem, 0.85vw, 0.68rem) 0 clamp(0.55rem, 1.7vw, 1.35rem);
-  font-size: 1.14rem;
+  font-size: 0.96rem;
   text-align: justify;
   text-justify: inter-word;
 }
-.prose p { max-width: 78ch; }
+.prose p { max-width: 72ch; }
 .prose p:last-child { margin-bottom: 0; }
 .media-link { display: inline-block; margin-top: 1rem; word-break: break-word; }
 .press-prose {
-  max-width: min(100%, 1040px);
+  max-width: min(100%, 880px);
   margin-top: clamp(1.4rem, 3vw, 2.4rem);
-  font-size: 1.14rem;
+  font-size: 0.96rem;
   text-align: justify;
   text-justify: inter-word;
 }
 .press-prose h2 {
   margin: clamp(2.2rem, 4.6vw, 3.8rem) 0 0.6rem;
   font-family: var(--font-body);
-  font-size: clamp(1.18rem, 1.5vw, 1.45rem);
+  font-size: clamp(1.08rem, 1.28vw, 1.24rem);
   font-weight: 500;
   line-height: 1.15;
   text-align: left;
@@ -1706,7 +1706,7 @@ video {
 .press-prose h3 {
   margin: clamp(2.2rem, 4.6vw, 3.8rem) 0 0.6rem;
   font-family: var(--font-body);
-  font-size: clamp(1.34rem, 1.72vw, 1.68rem);
+  font-size: clamp(1.18rem, 1.44vw, 1.4rem);
   font-weight: 600;
   line-height: 1.15;
   text-align: left;
@@ -1716,13 +1716,13 @@ video {
 }
 .press-prose h3 + p {
   margin-bottom: 1.25rem;
-  font-size: clamp(1.08rem, 1.34vw, 1.25rem);
+  font-size: clamp(0.98rem, 1.12vw, 1.08rem);
   font-weight: 400;
   line-height: 1.25;
   text-align: left;
 }
 .press-prose p {
-  max-width: 92ch;
+  max-width: 82ch;
   margin: 0 0 1.05rem;
 }
 .press-prose a {
@@ -1761,7 +1761,7 @@ video {
 
 @media (max-width: 1180px) {
   .main-nav { position: static; width: auto; margin: 1rem; }
-  main { width: min(1200px, calc(100% - 2rem)); }
+  main { width: min(980px, calc(100% - 2rem)); }
 }
 
 @media (max-width: 860px) {
