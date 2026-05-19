@@ -25,10 +25,13 @@ function linkAttrs(href = "") {
 }
 
 function inlineMarkdown(value = "") {
+  const escapedAsterisk = "\uE000";
   return escapeHtml(value)
+    .replace(/\\\*/g, escapedAsterisk)
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.*?)\*/g, "<em>$1</em>")
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label, href) => `<a href="${href}"${linkAttrs(href)}>${label}</a>`);
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label, href) => `<a href="${href}"${linkAttrs(href)}>${label}</a>`)
+    .replaceAll(escapedAsterisk, "*");
 }
 
 function markdownToHtml(markdown = "") {
@@ -54,6 +57,16 @@ function markdownToHtml(markdown = "") {
       }
       const level = heading[1].length + 1;
       html += `<h${level}>${inlineMarkdown(heading[2])}</h${level}>`;
+      continue;
+    }
+
+    const escapedListMarker = /^\\([-*]\s+.+)$/.exec(line);
+    if (escapedListMarker) {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      html += `<p>${inlineMarkdown(escapedListMarker[1])}</p>`;
       continue;
     }
 
@@ -479,9 +492,9 @@ function researchPage({ academicResearch, tech }) {
       <p class="kicker">Research</p>
       <h1>Research</h1>
     </header>
-    <section id="technologies" class="entry-list">
+    <div id="technologies" class="entry-list">
       ${tech.map(entryArticle).join("")}
-    </section>
+    </div>
     <section id="publications" class="entry-block publications-block">
       <p class="kicker">Publications</p>
       <h2>List of publications</h2>
@@ -967,7 +980,7 @@ async function build() {
     readPage("academic-research"),
     readPage("teaching-confs"),
   ]);
-  const techOrder = ["after","platune", "rave", "nn"];
+  const techOrder = ["after", "imago", "platune", "rave", "nn"];
   tech.sort((a, b) => techOrder.indexOf(a.slug) - techOrder.indexOf(b.slug));
 
   await copyDir(join(root, "assets"), join(distDir, "assets"));
@@ -1416,6 +1429,12 @@ h3 { margin: 0.5rem 0; font-size: 1.25rem; }
   font-size: clamp(0.98rem, 1.08vw, 1.12rem);
   color: var(--ink);
 }
+.hero .lead {
+  font-size: 1.14rem;
+  line-height: 1.45;
+  text-align: justify;
+  text-justify: inter-word;
+}
 .lead p { margin: 0 0 1rem; }
 .hero-links {
   margin-top: 1.5rem;
@@ -1524,7 +1543,7 @@ section { padding: clamp(3rem, 7vw, 6rem) 0; }
   padding: clamp(1rem, 2.8vw, 2rem) 0;
 }
 .entry-block h2 {
-  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-size: clamp(1.5rem, 3.5vw, 3.rem);
   font-weight: 500;
   white-space: normal;
 }
@@ -1583,6 +1602,26 @@ section { padding: clamp(3rem, 7vw, 6rem) 0; }
 }
 .publications-block {
   margin-top: clamp(2rem, 5vw, 4rem);
+}
+.publications-block .prose h3 {
+  margin: clamp(2.1rem, 4vw, 3.2rem) 0 0.35rem;
+  font-family: var(--font-body);
+  font-size: clamp(1.22rem, 1.58vw, 1.52rem);
+  font-weight: 650;
+  line-height: 1.16;
+  text-align: left;
+}
+.publications-block .prose h3:first-child {
+  margin-top: 0;
+}
+.publications-block .prose h3 + p,
+.publications-block .prose h3 + p + p {
+  margin: 0.18rem 0 0;
+  text-align: left;
+}
+.publications-block .prose p:last-child {
+  margin-top: clamp(1.8rem, 3.5vw, 2.7rem);
+  text-align: left;
 }
 .media-card {
   border-top: 1px solid var(--ink);
@@ -1646,17 +1685,44 @@ video {
 .prose p:last-child { margin-bottom: 0; }
 .media-link { display: inline-block; margin-top: 1rem; word-break: break-word; }
 .press-prose {
-  max-width: 760px;
-  font-size: 1.06rem;
+  max-width: min(100%, 1040px);
+  margin-top: clamp(1.4rem, 3vw, 2.4rem);
+  font-size: 1.14rem;
+  text-align: justify;
+  text-justify: inter-word;
 }
-.press-prose h2,
-.press-prose h3 {
-  margin: 1.6rem 0 0.5rem;
+.press-prose h2 {
+  margin: clamp(2.2rem, 4.6vw, 3.8rem) 0 0.6rem;
   font-family: var(--font-body);
-  font-size: 1rem;
+  font-size: clamp(1.18rem, 1.5vw, 1.45rem);
+  font-weight: 500;
+  line-height: 1.15;
+  text-align: left;
+}
+.press-prose h2:first-child {
+  margin-top: 0;
+}
+.press-prose h3 {
+  margin: clamp(2.2rem, 4.6vw, 3.8rem) 0 0.6rem;
+  font-family: var(--font-body);
+  font-size: clamp(1.34rem, 1.72vw, 1.68rem);
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: left;
+}
+.press-prose h3:first-child {
+  margin-top: 0;
+}
+.press-prose h3 + p {
+  margin-bottom: 1.25rem;
+  font-size: clamp(1.08rem, 1.34vw, 1.25rem);
+  font-weight: 400;
+  line-height: 1.25;
+  text-align: left;
 }
 .press-prose p {
-  margin: 0 0 1rem;
+  max-width: 92ch;
+  margin: 0 0 1.05rem;
 }
 .press-prose a {
   color: inherit;
@@ -1700,6 +1766,7 @@ video {
   .hero-title-lockup { grid-template-columns: clamp(72px, 22vw, 120px) minmax(0, auto); }
   h1 { font-size: clamp(3rem, 18vw, 6rem); }
   .lead { margin-left: 0; }
+  .hero .lead { text-align: left; }
   .section-head { display: block; }
   .grid, .grid.compact, .media-grid, .people-grid { grid-template-columns: 1fr; }
   .entry-content.has-schematic { grid-template-columns: 1fr; }
