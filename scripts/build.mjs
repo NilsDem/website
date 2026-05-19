@@ -388,6 +388,7 @@ function mainNav(current = "") {
 
 function pageShell({ title, description, body, current = "", siteTitle: titleInHeader = siteTitle }) {
   const mapId = current || "home";
+  const cssVersion = createHash("sha1").update(css).digest("hex").slice(0, 10);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -395,7 +396,7 @@ function pageShell({ title, description, body, current = "", siteTitle: titleInH
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(description || "ACIDS")}" />
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=${cssVersion}">
 </head>
 <body class="map-${escapeHtml(mapId)}">
   ${mainNav(current)}
@@ -1543,7 +1544,7 @@ section { padding: clamp(3rem, 7vw, 6rem) 0; }
   padding: clamp(1rem, 2.8vw, 2rem) 0;
 }
 .entry-block h2 {
-  font-size: clamp(1.5rem, 3.5vw, 3.rem);
+  font-size: clamp(1.5rem, 3.5vw, 3rem);
   font-weight: 500;
   white-space: normal;
 }
@@ -1758,8 +1759,17 @@ video {
   overflow-wrap: anywhere;
 }
 
+@media (min-width: 861px) and (max-width: 1500px) {
+  main {
+    width: min(1200px, calc(100% - 13rem));
+    margin-left: max(1rem, calc((100% - 1200px - 11rem) / 2));
+    margin-right: auto;
+  }
+}
+
 @media (max-width: 860px) {
   .main-nav { position: static; width: auto; margin: 1rem; }
+  main { width: min(1200px, calc(100% - 2rem)); }
   .hero { min-height: auto; }
   .hero-grid { grid-template-columns: 1fr; }
   .portrait-slot { width: min(100%, 320px); }
