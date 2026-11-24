@@ -1005,6 +1005,7 @@ function paperGrainSvg() {
 async function build() {
   await rm(distDir, { recursive: true, force: true });
   await mkdir(distDir, { recursive: true });
+  await copyDir(join(root, "public"), distDir);
 
   const siteSource = await readFile(join(contentDir, "site.md"), "utf8");
   const [site, siteBody] = parseFrontmatter(siteSource);
