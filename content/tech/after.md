@@ -7,9 +7,7 @@ links:
   github: https://github.com/acids-ircam/AFTER/
   paper: https://arxiv.org/abs/2408.00196
   webpage: https://nilsdem.github.io/control-transfer-diffusion/
-demos:
-  - /assets/site/demo_after_midi.mp4
-  - /assets/site/demo_after_drums.mp4
+featured_demo: /assets/site/after-ircam-forum.mp4
 schematic: /assets/after.png
 schematic_alt: AFTER system schematic
 used_by:

@@ -61,6 +61,17 @@ Main text of the page, written in Markdown.
 
 To add a new entry, duplicate an existing Markdown file in the right `content/` folder, edit the frontmatter and body, then run `npm run build`. YouTube links in `files` on project entries are embedded automatically; `media` can be a YouTube URL or an `.mp4`.
 
+### New video content
+
+- Edit the wind device explanation in `content/works/electro-odyssee.md`, between `<!-- device -->` and `<!-- documentary -->`. This text appears to the left of the demo on desktop, and above it on mobile.
+- Edit the documentary introduction below `<!-- documentary -->`. The two `extracts` appear in order, left to right on desktop and stacked on mobile, followed by `documentary_url`.
+- The corresponding Media entry is `content/media/phantasia.md`.
+- The IRCAM Forum AFTER demo is the `featured_demo` in `content/tech/after.md`.
+
+These videos and their JPEG posters are stored in `assets/site/`, included in the static build, and served directly by Netlify. New players load their poster first and fetch video only when played. For `device_video`, `featured_demo`, and `extracts`, the poster uses the same filename with a `.jpg` extension.
+
+The documentary extracts were cropped from their 1080 × 1350 Instagram layouts to the central 1080 × 608 picture (`crop=1080:608:0:370`). The wind demo retains its 4:5 format at 720 × 900, and AFTER retains 1920 × 1080 for interface readability. All four use H.264 (CRF 22, slow preset), AAC audio at 192 kb/s, and MP4 fast-start metadata for streaming. Originals remain outside the repository.
+
 ## Build
 
 ```sh

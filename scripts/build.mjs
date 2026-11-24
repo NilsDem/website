@@ -152,13 +152,19 @@ async function readEntries(section) {
     const source = await readFile(join(dir, name), "utf8");
     const [data, body] = parseFrontmatter(source);
     if (data.draft) continue;
+    const bodyParts = body.split(/<!--\s*(device|documentary)\s*-->/);
+    const mainBody = bodyParts[0];
+    const bodySections = {};
+    for (let i = 1; i < bodyParts.length; i += 2) bodySections[bodyParts[i]] = bodyParts[i + 1];
     const slug = name.replace(/\.md$/, "");
     entries.push({
       ...data,
       slug,
       section,
       body,
-      bodyHtml: markdownToHtml(body),
+      bodyHtml: markdownToHtml(mainBody),
+      deviceBodyHtml: markdownToHtml(bodySections.device || ""),
+      documentaryBodyHtml: markdownToHtml(bodySections.documentary || ""),
       url: `${section}/${slug}.html`,
     });
   }
@@ -457,20 +463,47 @@ function entryArticle(entry) {
     ...(Array.isArray(entry.demos) ? entry.demos : []),
     ...(!entry.demos && entry.demo ? [entry.demo] : []),
   ];
-  return `<article class="entry-block" id="${escapeHtml(entry.slug)}">
+  return `<article class="entry-block ${entry.device_video ? "has-device" : ""}" id="${escapeHtml(entry.slug)}">
     <p class="kicker">${escapeHtml(entry.type || entry.section)}</p>
     <h2>${escapeHtml(entry.title)}</h2>
     ${metaLine(entry) ? `<p class="lead meta">${metaLine(entry)}</p>` : ""}
     ${entryChips(entry)}
-    <div class="entry-content ${entry.schematic ? "has-schematic" : ""}">
+    <div class="entry-content ${entry.schematic ? "has-schematic" : ""} ${entry.device_video ? "has-device" : ""}">
       <section class="prose">${entry.bodyHtml}</section>
       ${schematicFigure(entry)}
     </div>
     ${mediaEmbed(entry)}
+    ${entry.featured_demo ? `<figure class="featured-demo">${localVideo(entry.featured_demo, `${entry.title} — IRCAM Forum demonstration`)}</figure>` : ""}
     ${youtubeEmbedGrid(demoUrls)}
-    ${youtubeEmbeds(entry)}
+    ${entry.performance_at_end ? "" : youtubeEmbeds(entry)}
     ${linkList(entry.links || nonYouTubeLinks(entry.files))}
+    ${deviceSection(entry)}
+    ${documentarySection(entry)}
+    ${entry.performance_at_end ? `<section class="performance-section">${youtubeEmbeds(entry)}</section>` : ""}
   </article>`;
+}
+
+function localVideo(src, title, className = "") {
+  const poster = String(src).replace(/\.mp4$/i, ".jpg");
+  return `<video class="${className}" controls playsinline preload="none" poster="${escapeHtml(poster)}" aria-label="${escapeHtml(title)}" src="${escapeHtml(src)}"></video>`;
+}
+
+function deviceSection(entry) {
+  if (!entry.device_video) return "";
+  return `<section class="device-section" aria-label="Wind device">
+    <div class="prose device-copy">${entry.deviceBodyHtml}</div>
+    <figure>${localVideo(entry.device_video, "Wind device demonstration", "device-video")}</figure>
+  </section>`;
+}
+
+function documentarySection(entry) {
+  if (!Array.isArray(entry.extracts) || !entry.extracts.length) return "";
+  return `<section class="documentary-section" aria-label="Documentary extracts">
+    ${entry.documentary_title ? `<h3>${escapeHtml(entry.documentary_title)}</h3>` : ""}
+    ${entry.documentaryBodyHtml ? `<div class="prose">${entry.documentaryBodyHtml}</div>` : ""}
+    <div class="documentary-grid">${entry.extracts.map((src, index) => `<figure>${localVideo(src, `Documentary extract ${index + 1}`)}</figure>`).join("")}</div>
+    ${entry.documentary_url ? linkList({ "Watch the full documentary on ARTE": entry.documentary_url }) : ""}
+  </section>`;
 }
 
 function categoryPage({ title, kicker, description, current, introHtml = "", entries = [] }) {
@@ -1536,8 +1569,11 @@ section { padding: clamp(3rem, 7vw, 6rem) 0; }
   gap: clamp(1.6rem, 4vw, 3.4rem);
 }
 .entry-block {
+  --section-transition-gap: clamp(1.75rem, 3vw, 2.75rem);
   padding: clamp(1rem, 2.8vw, 2rem) 0;
 }
+.entry-block.has-device > .lead.meta { margin-bottom: 0; }
+.entry-block.has-device > .entry-content { margin-top: var(--section-transition-gap); }
 .entry-block h2 {
   font-size: clamp(1.42rem, 3vw, 2.55rem);
   font-weight: 500;
@@ -1632,6 +1668,40 @@ section { padding: clamp(3rem, 7vw, 6rem) 0; }
   padding: 0;
 }
 .youtube-grid::before { display: none; }
+.device-section,
+.documentary-section,
+.performance-section {
+  padding: 0;
+  margin-top: var(--section-transition-gap);
+}
+.device-section,
+.documentary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1rem, 3vw, 2rem);
+  align-items: start;
+}
+.device-section figure,
+.documentary-grid figure { margin: 0; min-width: 0; }
+.device-section {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+}
+.entry-content.has-device .prose { padding: 0; margin-top: 0; }
+.entry-content.has-device .prose p:first-child { margin-top: 0; }
+.device-section .device-copy { padding: 0; margin: 0; }
+.device-copy p:first-child { margin-top: 0; }
+.documentary-section .prose { padding: 0; margin: 0 0 1rem; }
+.documentary-section .prose p:first-child { margin-top: 0; }
+.documentary-section .prose p { max-width: none; }
+.performance-section > p { margin: 0 0 1rem; }
+.performance-section > .youtube-grid { margin-top: 0; }
+.documentary-section > h3 { margin-top: 0; }
+.device-section .device-video { aspect-ratio: 4 / 5; }
+.documentary-grid video { aspect-ratio: 1080 / 608; }
+.device-section figcaption,
+.documentary-grid figcaption,
+.featured-demo figcaption { margin-top: 0.5rem; color: var(--muted); font-size: 0.85rem; }
+.featured-demo { margin: 1.5rem 0; }
 .youtube-grid iframe,
 .youtube-grid video,
 .youtube-embed {
@@ -1772,6 +1842,8 @@ video {
   .entry-content.has-schematic { grid-template-columns: 1fr; }
   .prose { text-align: left; }
   .youtube-grid { grid-template-columns: 1fr; }
+  .device-section, .documentary-grid { grid-template-columns: 1fr; }
+  .device-section figure { width: min(100%, 300px); justify-self: center; }
   .card { min-height: auto; }
 }
 `;
